@@ -24,7 +24,7 @@ interface DashboardProps {
 }
 
 const Dashboard = ({ onLogout }: DashboardProps) => {
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState("add");
 
   return (
     <div className="min-h-screen bg-background">
@@ -59,13 +59,13 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid bg-card shadow-md">
-            <TabsTrigger value="dashboard" className="gap-2">
-              <LayoutDashboard className="w-4 h-4" />
-              <span className="hidden sm:inline">Dashboard</span>
-            </TabsTrigger>
             <TabsTrigger value="add" className="gap-2">
               <PlusCircle className="w-4 h-4" />
               <span className="hidden sm:inline">Adicionar</span>
+            </TabsTrigger>
+            <TabsTrigger value="dashboard" className="gap-2">
+              <LayoutDashboard className="w-4 h-4" />
+              <span className="hidden sm:inline">Dashboard</span>
             </TabsTrigger>
             <TabsTrigger value="expenses" className="gap-2">
               <CalendarDays className="w-4 h-4" />
@@ -76,6 +76,10 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
               <span className="hidden sm:inline">Gráficos</span>
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="add" className="animate-fade-in">
+            <ExpenseForm />
+          </TabsContent>
 
           <TabsContent value="dashboard" className="space-y-6 animate-fade-in">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -117,10 +121,6 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
             </div>
 
             <StatsOverview />
-          </TabsContent>
-
-          <TabsContent value="add" className="animate-fade-in">
-            <ExpenseForm />
           </TabsContent>
 
           <TabsContent value="expenses" className="animate-fade-in">
