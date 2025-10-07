@@ -40,6 +40,16 @@ const ExpenseList = () => {
     },
   ];
 
+  const filteredExpenses = expenses.filter((expense) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      expense.categoria.toLowerCase().includes(query) ||
+      expense.descricao.toLowerCase().includes(query) ||
+      expense.responsavel.toLowerCase().includes(query) ||
+      expense.valor.toString().includes(query)
+    );
+  });
+
   return (
     <div className="space-y-6">
       <Card className="p-6 shadow-lg gradient-card">
@@ -66,7 +76,7 @@ const ExpenseList = () => {
         </div>
 
         <div className="space-y-3">
-          {expenses.map((expense) => (
+          {filteredExpenses.map((expense) => (
             <Card 
               key={expense.id} 
               className="p-4 hover:shadow-md transition-all duration-300 border-l-4"
@@ -125,10 +135,12 @@ const ExpenseList = () => {
           ))}
         </div>
 
-        {expenses.length === 0 && (
+        {filteredExpenses.length === 0 && (
           <div className="text-center py-12">
             <Tag className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">Nenhum gasto registrado ainda</p>
+            <p className="text-muted-foreground">
+              {searchQuery ? "Nenhum gasto encontrado" : "Nenhum gasto registrado ainda"}
+            </p>
           </div>
         )}
       </Card>
