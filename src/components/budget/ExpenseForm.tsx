@@ -6,9 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, DollarSign, Calendar, FileText, User, Tag } from "lucide-react";
+import { PlusCircle, DollarSign, Calendar, FileText, User, Tag, Settings } from "lucide-react";
 
-const ExpenseForm = () => {
+interface ExpenseFormProps {
+  onManageCategories: () => void;
+}
+
+const ExpenseForm = ({ onManageCategories }: ExpenseFormProps) => {
   const { toast } = useToast();
   const [tipo, setTipo] = useState("variavel");
   const [categoria, setCategoria] = useState("");
@@ -48,14 +52,25 @@ const ExpenseForm = () => {
 
   return (
     <Card className="max-w-2xl mx-auto p-6 md:p-8 shadow-lg gradient-card">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 gradient-primary rounded-xl flex items-center justify-center">
-          <PlusCircle className="w-6 h-6 text-white" />
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 gradient-primary rounded-xl flex items-center justify-center">
+            <PlusCircle className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">Adicionar Gasto</h2>
+            <p className="text-sm text-muted-foreground">Registre uma nova despesa</p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Adicionar Gasto</h2>
-          <p className="text-sm text-muted-foreground">Registre uma nova despesa</p>
-        </div>
+        <Button 
+          type="button"
+          variant="outline" 
+          onClick={onManageCategories}
+          className="gap-2"
+        >
+          <Settings className="w-4 h-4" />
+          <span className="hidden sm:inline">Gerenciar Categorias</span>
+        </Button>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">

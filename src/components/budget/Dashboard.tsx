@@ -18,6 +18,7 @@ import ExpenseForm from "./ExpenseForm";
 import ExpenseList from "./ExpenseList";
 import StatsOverview from "./StatsOverview";
 import ChartsSection from "./ChartsSection";
+import CategoryManager from "./CategoryManager";
 
 interface DashboardProps {
   onLogout: () => void;
@@ -25,6 +26,7 @@ interface DashboardProps {
 
 const Dashboard = ({ onLogout }: DashboardProps) => {
   const [activeTab, setActiveTab] = useState("add");
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">
@@ -78,7 +80,11 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
           </TabsList>
 
           <TabsContent value="add" className="animate-fade-in">
-            <ExpenseForm />
+            {showCategoryManager ? (
+              <CategoryManager onBack={() => setShowCategoryManager(false)} />
+            ) : (
+              <ExpenseForm onManageCategories={() => setShowCategoryManager(true)} />
+            )}
           </TabsContent>
 
           <TabsContent value="dashboard" className="space-y-6 animate-fade-in">
