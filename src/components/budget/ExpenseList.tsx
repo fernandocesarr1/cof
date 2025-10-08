@@ -51,83 +51,83 @@ const ExpenseList = () => {
   });
 
   return (
-    <div className="space-y-6">
-      <Card className="p-6 shadow-lg gradient-card">
-        <div className="flex items-center justify-between mb-6">
+    <div className="space-y-4 sm:space-y-6">
+      <Card className="p-4 sm:p-6 shadow-lg gradient-card">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-foreground">Lista de Gastos</h2>
-            <p className="text-sm text-muted-foreground">Visualize e gerencie suas despesas</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-foreground">Lista de Gastos</h2>
+            <p className="text-xs sm:text-sm text-muted-foreground">Visualize e gerencie suas despesas</p>
           </div>
-          <Button variant="outline" className="gap-2">
+          <Button variant="outline" className="gap-2 w-full sm:w-auto">
             <Download className="w-4 h-4" />
             Exportar
           </Button>
         </div>
 
-        <div className="relative mb-6">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+        <div className="relative mb-4 sm:mb-6">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
           <Input
             type="text"
-            placeholder="Buscar por categoria, descrição, valor..."
+            placeholder="Buscar gastos..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-12"
+            className="pl-9 sm:pl-10 h-10 sm:h-12 text-sm sm:text-base"
           />
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2 sm:space-y-3">
           {filteredExpenses.map((expense) => (
             <Card 
               key={expense.id} 
-              className="p-4 hover:shadow-md transition-all duration-300 border-l-4"
+              className="p-3 sm:p-4 hover:shadow-md transition-all duration-300 border-l-4"
               style={{
                 borderLeftColor: expense.tipo === "fixo" 
                   ? "hsl(var(--success))" 
                   : "hsl(var(--warning))"
               }}
             >
-              <div className="flex items-start justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-start gap-3">
                 <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3">
                     <Badge 
                       variant={expense.tipo === "fixo" ? "default" : "secondary"}
-                      className="font-medium"
+                      className="font-medium text-xs"
                     >
                       {expense.tipo === "fixo" ? "Fixo" : "Variável"}
                     </Badge>
-                    <span className="font-semibold text-lg text-foreground">
+                    <span className="font-semibold text-base sm:text-lg text-foreground">
                       {expense.categoria}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <DollarSign className="w-4 h-4" />
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3 text-xs sm:text-sm">
+                    <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
+                      <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
                       <span className="font-bold text-foreground">
                         R$ {expense.valor.toFixed(2)}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Calendar className="w-4 h-4" />
-                      <span>{new Date(expense.data + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
+                    <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
+                      <Calendar className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                      <span className="truncate">{new Date(expense.data + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <User className="w-4 h-4" />
-                      <span>{expense.responsavel}</span>
+                    <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
+                      <User className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                      <span className="truncate">{expense.responsavel}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <FileText className="w-4 h-4" />
+                    <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
+                      <FileText className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
                       <span className="truncate">{expense.descricao}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex gap-2 ml-4">
-                  <Button variant="ghost" size="icon" className="hover:bg-accent">
-                    <Edit className="w-4 h-4" />
+                <div className="flex gap-1 sm:gap-2 self-end sm:self-start">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-accent">
+                    <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="hover:bg-danger/10 hover:text-danger">
-                    <Trash2 className="w-4 h-4" />
+                  <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-danger/10 hover:text-danger">
+                    <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </Button>
                 </div>
               </div>

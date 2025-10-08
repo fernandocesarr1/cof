@@ -19,15 +19,15 @@ const StatsOverview = () => {
   };
 
   return (
-    <Card className="p-6 shadow-lg gradient-card">
-      <h2 className="text-xl font-bold text-foreground mb-6">Gastos por Categoria</h2>
+    <Card className="p-4 sm:p-6 shadow-lg gradient-card">
+      <h2 className="text-lg sm:text-xl font-bold text-foreground mb-4 sm:mb-6">Gastos por Categoria</h2>
       
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
         {/* Gastos Fixos */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-1 h-6 bg-success rounded-full" />
-            <h3 className="font-semibold text-foreground">Gastos Fixos</h3>
+        <div className="space-y-3 sm:space-y-4">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4">
+            <div className="w-1 h-5 sm:h-6 bg-success rounded-full" />
+            <h3 className="text-sm sm:text-base font-semibold text-foreground">Gastos Fixos</h3>
           </div>
           {categories.filter(c => c.type === "fixo").map((category, index) => {
             const percentage = category.limit > 0 ? (category.value / category.limit) * 100 : 0;
@@ -61,10 +61,10 @@ const StatsOverview = () => {
         </div>
 
         {/* Gastos Variáveis */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-1 h-6 bg-warning rounded-full" />
-            <h3 className="font-semibold text-foreground">Gastos Variáveis</h3>
+        <div className="space-y-3 sm:space-y-4">
+          <div className="flex items-center gap-2 mb-3 sm:mb-4">
+            <div className="w-1 h-5 sm:h-6 bg-warning rounded-full" />
+            <h3 className="text-sm sm:text-base font-semibold text-foreground">Gastos Variáveis</h3>
           </div>
           {categories.filter(c => c.type === "variavel").map((category, index) => {
             const percentage = category.limit > 0 ? (category.value / category.limit) * 100 : 0;

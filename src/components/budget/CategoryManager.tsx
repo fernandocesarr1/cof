@@ -85,33 +85,33 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
   };
 
   return (
-    <div className="space-y-6">
-      <Card className="p-6 shadow-lg gradient-card">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
+    <div className="space-y-4 sm:space-y-6">
+      <Card className="p-4 sm:p-6 shadow-lg gradient-card">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 sm:gap-3 mb-2">
               <Button 
                 variant="ghost" 
                 size="icon"
                 onClick={onBack}
-                className="hover:bg-accent"
+                className="h-8 w-8 sm:h-10 sm:w-10 hover:bg-accent"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
-              <h2 className="text-2xl font-bold text-foreground">Gerenciar Categorias</h2>
+              <h2 className="text-lg sm:text-2xl font-bold text-foreground">Gerenciar Categorias</h2>
             </div>
-            <p className="text-sm text-muted-foreground ml-12">Adicione e configure suas categorias de gastos</p>
+            <p className="text-xs sm:text-sm text-muted-foreground ml-10 sm:ml-12">Adicione e configure suas categorias de gastos</p>
           </div>
-          <Tag className="w-8 h-8 text-primary" />
+          <Tag className="w-6 h-6 sm:w-8 sm:h-8 text-primary hidden sm:block" />
         </div>
 
         {/* Formulário para adicionar nova categoria */}
-        <Card className="p-4 mb-6 bg-accent/50 border-2 border-dashed">
-          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Plus className="w-5 h-5" />
+        <Card className="p-3 sm:p-4 mb-4 sm:mb-6 bg-accent/50 border-2 border-dashed">
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4 flex items-center gap-2">
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
             Nova Categoria
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             <Input
               placeholder="Nome da categoria"
               value={newCategory.nome}
@@ -145,12 +145,12 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
         </Card>
 
         {/* Lista de categorias agrupadas */}
-        <div className="space-y-6">
-          <h3 className="text-lg font-semibold text-foreground">Categorias Cadastradas</h3>
+        <div className="space-y-4 sm:space-y-6">
+          <h3 className="text-base sm:text-lg font-semibold text-foreground">Categorias Cadastradas</h3>
           
           {/* Categorias Fixas */}
           <div>
-            <h4 className="text-sm font-semibold text-success mb-3 flex items-center gap-2">
+            <h4 className="text-xs sm:text-sm font-semibold text-success mb-2 sm:mb-3 flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-success"></div>
               Fixas ({categoriasPorTipo.fixo.length})
             </h4>
@@ -218,7 +218,7 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
 
           {/* Categorias Variáveis */}
           <div>
-            <h4 className="text-sm font-semibold text-warning mb-3 flex items-center gap-2">
+            <h4 className="text-xs sm:text-sm font-semibold text-warning mb-2 sm:mb-3 flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-warning"></div>
               Variáveis ({categoriasPorTipo.variavel.length})
             </h4>
