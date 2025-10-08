@@ -52,25 +52,14 @@ const ExpenseForm = ({ onManageCategories }: ExpenseFormProps) => {
 
   return (
     <Card className="max-w-2xl mx-auto p-6 md:p-8 shadow-lg gradient-card">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 gradient-primary rounded-xl flex items-center justify-center">
-            <PlusCircle className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-foreground">Adicionar Gasto</h2>
-            <p className="text-sm text-muted-foreground">Registre uma nova despesa</p>
-          </div>
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-12 h-12 gradient-primary rounded-xl flex items-center justify-center">
+          <PlusCircle className="w-6 h-6 text-white" />
         </div>
-        <Button 
-          type="button"
-          variant="outline" 
-          onClick={onManageCategories}
-          className="gap-2"
-        >
-          <Settings className="w-4 h-4" />
-          <span className="hidden sm:inline">Gerenciar Categorias</span>
-        </Button>
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Adicionar Gasto</h2>
+          <p className="text-sm text-muted-foreground">Registre uma nova despesa</p>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -171,26 +160,36 @@ const ExpenseForm = ({ onManageCategories }: ExpenseFormProps) => {
           </div>
         </div>
 
-        <div className="flex gap-3 pt-4">
-          <Button 
-            type="submit" 
-            className="flex-1 h-12 gradient-primary hover:shadow-glow transition-all"
+        <div className="space-y-3 pt-4">
+          <div className="flex gap-3">
+            <Button 
+              type="submit" 
+              className="flex-1 h-12 gradient-primary hover:shadow-glow transition-all"
+            >
+              <PlusCircle className="w-5 h-5 mr-2" />
+              Adicionar Gasto
+            </Button>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => {
+                setValor("");
+                setCategoria("");
+                setDescricao("");
+              }}
+              className="h-12"
+            >
+              Limpar
+            </Button>
+          </div>
+          <button
+            type="button"
+            onClick={onManageCategories}
+            className="text-sm text-primary hover:underline flex items-center gap-1 mx-auto"
           >
-            <PlusCircle className="w-5 h-5 mr-2" />
-            Adicionar Gasto
-          </Button>
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={() => {
-              setValor("");
-              setCategoria("");
-              setDescricao("");
-            }}
-            className="h-12"
-          >
-            Limpar
-          </Button>
+            <Settings className="w-3 h-3" />
+            Gerenciar Categorias
+          </button>
         </div>
       </form>
     </Card>

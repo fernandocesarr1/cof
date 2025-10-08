@@ -40,6 +40,9 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
     limite: ""
   });
 
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({ nome: "", limite: "" });
+
   const handleAddCategory = () => {
     if (newCategory.nome && newCategory.limite) {
       setCategories([
@@ -57,6 +60,28 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
 
   const handleDeleteCategory = (id: number) => {
     setCategories(categories.filter(cat => cat.id !== id));
+  };
+
+  const handleEditCategory = (category: typeof categories[0]) => {
+    setEditingId(category.id);
+    setEditForm({ nome: category.nome, limite: category.limite.toString() });
+  };
+
+  const handleSaveEdit = () => {
+    if (editingId && editForm.nome && editForm.limite) {
+      setCategories(categories.map(cat =>
+        cat.id === editingId
+          ? { ...cat, nome: editForm.nome, limite: parseFloat(editForm.limite) }
+          : cat
+      ));
+      setEditingId(null);
+      setEditForm({ nome: "", limite: "" });
+    }
+  };
+
+  const categoriasPorTipo = {
+    fixo: categories.filter(cat => cat.tipo === "fixo"),
+    variavel: categories.filter(cat => cat.tipo === "variavel")
   };
 
   return (
@@ -119,55 +144,145 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
           </div>
         </Card>
 
-        {/* Lista de categorias */}
-        <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-foreground mb-4">Categorias Cadastradas</h3>
+        {/* Lista de categorias agrupadas */}
+        <div className="space-y-6">
+          <h3 className="text-lg font-semibold text-foreground">Categorias Cadastradas</h3>
           
-          {categories.map((category) => (
-            <Card 
-              key={category.id}
-              className="p-4 hover:shadow-md transition-all duration-300 border-l-4"
-              style={{
-                borderLeftColor: category.tipo === "fixo" 
-                  ? "hsl(var(--success))" 
-                  : "hsl(var(--warning))"
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4 flex-1">
-                  <Badge 
-                    variant={category.tipo === "fixo" ? "default" : "secondary"}
-                    className="font-medium"
-                  >
-                    {category.tipo === "fixo" ? "Fixo" : "Variável"}
-                  </Badge>
-                  <span className="font-semibold text-lg text-foreground">
-                    {category.nome}
-                  </span>
-                  <div className="flex items-center gap-2 text-muted-foreground ml-auto mr-4">
-                    <DollarSign className="w-4 h-4" />
-                    <span className="font-medium">
-                      Limite: R$ {category.limite.toFixed(2)}
-                    </span>
-                  </div>
+          {/* Categorias Fixas */}
+          <div>
+            <h4 className="text-sm font-semibold text-success mb-3 flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-success"></div>
+              Fixas ({categoriasPorTipo.fixo.length})
+            </h4>
+            <div className="grid gap-2">
+              {categoriasPorTipo.fixo.map((category) => (
+                <div 
+                  key={category.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-accent/30 hover:bg-accent/50 transition-colors"
+                >
+                  {editingId === category.id ? (
+                    <>
+                      <div className="flex items-center gap-2 flex-1">
+                        <Input
+                          value={editForm.nome}
+                          onChange={(e) => setEditForm({ ...editForm, nome: e.target.value })}
+                          className="h-8 max-w-[200px]"
+                        />
+                        <Input
+                          type="number"
+                          value={editForm.limite}
+                          onChange={(e) => setEditForm({ ...editForm, limite: e.target.value })}
+                          className="h-8 max-w-[120px]"
+                          placeholder="Limite"
+                        />
+                      </div>
+                      <div className="flex gap-1">
+                        <Button size="sm" onClick={handleSaveEdit} className="h-8">
+                          Salvar
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setEditingId(null)} className="h-8">
+                          Cancelar
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-3 flex-1">
+                        <span className="font-medium text-foreground">{category.nome}</span>
+                        <span className="text-sm text-muted-foreground">R$ {category.limite.toFixed(2)}</span>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 hover:bg-accent"
+                          onClick={() => handleEditCategory(category)}
+                        >
+                          <Edit className="w-3 h-3" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 hover:bg-danger/10 hover:text-danger"
+                          onClick={() => handleDeleteCategory(category.id)}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </div>
+              ))}
+            </div>
+          </div>
 
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="icon" className="hover:bg-accent">
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="hover:bg-danger/10 hover:text-danger"
-                    onClick={() => handleDeleteCategory(category.id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+          {/* Categorias Variáveis */}
+          <div>
+            <h4 className="text-sm font-semibold text-warning mb-3 flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-warning"></div>
+              Variáveis ({categoriasPorTipo.variavel.length})
+            </h4>
+            <div className="grid gap-2">
+              {categoriasPorTipo.variavel.map((category) => (
+                <div 
+                  key={category.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-accent/30 hover:bg-accent/50 transition-colors"
+                >
+                  {editingId === category.id ? (
+                    <>
+                      <div className="flex items-center gap-2 flex-1">
+                        <Input
+                          value={editForm.nome}
+                          onChange={(e) => setEditForm({ ...editForm, nome: e.target.value })}
+                          className="h-8 max-w-[200px]"
+                        />
+                        <Input
+                          type="number"
+                          value={editForm.limite}
+                          onChange={(e) => setEditForm({ ...editForm, limite: e.target.value })}
+                          className="h-8 max-w-[120px]"
+                          placeholder="Limite"
+                        />
+                      </div>
+                      <div className="flex gap-1">
+                        <Button size="sm" onClick={handleSaveEdit} className="h-8">
+                          Salvar
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setEditingId(null)} className="h-8">
+                          Cancelar
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-3 flex-1">
+                        <span className="font-medium text-foreground">{category.nome}</span>
+                        <span className="text-sm text-muted-foreground">R$ {category.limite.toFixed(2)}</span>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 hover:bg-accent"
+                          onClick={() => handleEditCategory(category)}
+                        >
+                          <Edit className="w-3 h-3" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 hover:bg-danger/10 hover:text-danger"
+                          onClick={() => handleDeleteCategory(category.id)}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </div>
-              </div>
-            </Card>
-          ))}
+              ))}
+            </div>
+          </div>
 
           {categories.length === 0 && (
             <div className="text-center py-12">
