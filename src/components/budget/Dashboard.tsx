@@ -60,24 +60,26 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
       {/* Main Content */}
       <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid bg-card shadow-md">
-            <TabsTrigger value="add" className="gap-1 sm:gap-2 text-xs sm:text-sm">
-              <PlusCircle className="w-4 h-4" />
-              <span className="hidden sm:inline">Adicionar</span>
-            </TabsTrigger>
-            <TabsTrigger value="dashboard" className="gap-1 sm:gap-2 text-xs sm:text-sm">
-              <LayoutDashboard className="w-4 h-4" />
-              <span className="hidden sm:inline">Dashboard</span>
-            </TabsTrigger>
-            <TabsTrigger value="expenses" className="gap-1 sm:gap-2 text-xs sm:text-sm">
-              <CalendarDays className="w-4 h-4" />
-              <span className="hidden sm:inline">Gastos</span>
-            </TabsTrigger>
-            <TabsTrigger value="charts" className="gap-1 sm:gap-2 text-xs sm:text-sm">
-              <PieChart className="w-4 h-4" />
-              <span className="hidden sm:inline">Gráficos</span>
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex justify-center">
+            <TabsList className="grid grid-cols-4 lg:inline-grid bg-card shadow-md">
+              <TabsTrigger value="add" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+                <PlusCircle className="w-4 h-4" />
+                <span className="hidden sm:inline">Adicionar</span>
+              </TabsTrigger>
+              <TabsTrigger value="dashboard" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+                <LayoutDashboard className="w-4 h-4" />
+                <span className="hidden sm:inline">Dashboard</span>
+              </TabsTrigger>
+              <TabsTrigger value="charts" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+                <PieChart className="w-4 h-4" />
+                <span className="hidden sm:inline">Gráficos</span>
+              </TabsTrigger>
+              <TabsTrigger value="expenses" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+                <CalendarDays className="w-4 h-4" />
+                <span className="hidden sm:inline">Gastos</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="add" className="animate-fade-in">
             {showCategoryManager ? (
