@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,28 +7,49 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { PlusCircle, DollarSign, Calendar, FileText, User, Tag, Settings } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ExpenseFormProps {
   onManageCategories: () => void;
+  onExpenseAdded?: () => void;
 }
 
-const ExpenseForm = ({ onManageCategories }: ExpenseFormProps) => {
+const ExpenseForm = ({ onManageCategories, onExpenseAdded }: ExpenseFormProps) => {
   const { toast } = useToast();
-  const [tipo, setTipo] = useState("variavel");
-  const [categoria, setCategoria] = useState("");
+  const [categories, setCategories] = useState<any[]>([]);
+  const [categoryId, setCategoryId] = useState("");
   const [valor, setValor] = useState("");
   const [data, setData] = useState(new Date().toISOString().split('T')[0]);
   const [descricao, setDescricao] = useState("");
-  const [responsavel, setResponsavel] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const categoriasFixas = ['Escola', 'Diarista', 'Internet', 'Água', 'Luz', 'Clube'];
-  const categoriasVariaveis = ['Supermercado', 'Farmácia', 'Lazer'];
   const nomes = ['Fernando', 'Estefania'];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    loadCategories();
+  }, []);
+
+  const loadCategories = async () => {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .order('name');
+    
+    if (error) {
+      toast({
+        title: "Erro ao carregar categorias",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      setCategories(data || []);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!valor || !categoria || !descricao || !responsavel) {
+    if (!valor || !categoryId || !descricao) {
       toast({
         title: "Campos obrigatórios",
         description: "Preencha todos os campos para adicionar um gasto.",
@@ -37,18 +58,40 @@ const ExpenseForm = ({ onManageCategories }: ExpenseFormProps) => {
       return;
     }
 
-    toast({
-      title: "Gasto adicionado! 🎉",
-      description: `R$ ${parseFloat(valor).toFixed(2)} em ${categoria}`,
-    });
+    setLoading(true);
+    const { error } = await supabase
+      .from('expenses')
+      .insert({
+        description: descricao,
+        amount: parseFloat(valor),
+        category_id: categoryId,
+        date: data
+      });
 
-    // Limpar formulário
-    setValor("");
-    setCategoria("");
-    setDescricao("");
+    setLoading(false);
+
+    if (error) {
+      toast({
+        title: "Erro ao adicionar gasto",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      const selectedCategory = categories.find(c => c.id === categoryId);
+      toast({
+        title: "Gasto adicionado! 🎉",
+        description: `R$ ${parseFloat(valor).toFixed(2)} em ${selectedCategory?.name}`,
+      });
+
+      // Limpar formulário
+      setValor("");
+      setCategoryId("");
+      setDescricao("");
+      
+      // Notificar componente pai
+      onExpenseAdded?.();
+    }
   };
-
-  const categorias = tipo === "fixo" ? categoriasFixas : categoriasVariaveis;
 
   return (
     <Card className="max-w-2xl mx-auto p-4 sm:p-6 md:p-8 shadow-lg gradient-card">
@@ -65,33 +108,19 @@ const ExpenseForm = ({ onManageCategories }: ExpenseFormProps) => {
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="tipo" className="flex items-center gap-2">
-              <Tag className="w-4 h-4" />
-              Tipo de Gasto
-            </Label>
-            <Select value={tipo} onValueChange={setTipo}>
-              <SelectTrigger id="tipo" className="h-11">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="fixo">Fixo</SelectItem>
-                <SelectItem value="variavel">Variável</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="categoria" className="flex items-center gap-2">
               <Tag className="w-4 h-4" />
               Categoria
             </Label>
-            <Select value={categoria} onValueChange={setCategoria}>
+            <Select value={categoryId} onValueChange={setCategoryId}>
               <SelectTrigger id="categoria" className="h-11">
                 <SelectValue placeholder="Selecione..." />
               </SelectTrigger>
               <SelectContent>
-                {categorias.map((cat) => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -128,22 +157,6 @@ const ExpenseForm = ({ onManageCategories }: ExpenseFormProps) => {
             />
           </div>
 
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="responsavel" className="flex items-center gap-2">
-              <User className="w-4 h-4" />
-              Responsável
-            </Label>
-            <Select value={responsavel} onValueChange={setResponsavel}>
-              <SelectTrigger id="responsavel" className="h-11">
-                <SelectValue placeholder="Selecione..." />
-              </SelectTrigger>
-              <SelectContent>
-                {nomes.map((nome) => (
-                  <SelectItem key={nome} value={nome}>{nome}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
 
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="descricao" className="flex items-center gap-2">
@@ -165,16 +178,17 @@ const ExpenseForm = ({ onManageCategories }: ExpenseFormProps) => {
             <Button 
               type="submit" 
               className="flex-1 h-12 gradient-primary hover:shadow-glow transition-all"
+              disabled={loading}
             >
               <PlusCircle className="w-5 h-5 mr-2" />
-              Adicionar Gasto
+              {loading ? "Salvando..." : "Adicionar Gasto"}
             </Button>
             <Button 
               type="button" 
               variant="outline" 
               onClick={() => {
                 setValor("");
-                setCategoria("");
+                setCategoryId("");
                 setDescricao("");
               }}
               className="h-12"

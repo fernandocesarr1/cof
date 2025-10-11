@@ -27,6 +27,7 @@ interface DashboardProps {
 const Dashboard = ({ onLogout }: DashboardProps) => {
   const [activeTab, setActiveTab] = useState("add");
   const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -85,7 +86,10 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
             {showCategoryManager ? (
               <CategoryManager onBack={() => setShowCategoryManager(false)} />
             ) : (
-              <ExpenseForm onManageCategories={() => setShowCategoryManager(true)} />
+              <ExpenseForm 
+                onManageCategories={() => setShowCategoryManager(true)}
+                onExpenseAdded={() => setRefreshTrigger(prev => prev + 1)}
+              />
             )}
           </TabsContent>
 
@@ -132,7 +136,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
           </TabsContent>
 
           <TabsContent value="expenses" className="animate-fade-in">
-            <ExpenseList />
+            <ExpenseList refreshTrigger={refreshTrigger} />
           </TabsContent>
 
           <TabsContent value="charts" className="animate-fade-in">
