@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { PlusCircle, DollarSign, Calendar, FileText, User, Tag, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { logActivity } from "@/lib/activity-logger";
 
 interface ExpenseFormProps {
   onManageCategories: () => void;
@@ -78,6 +79,15 @@ const ExpenseForm = ({ onManageCategories, onExpenseAdded }: ExpenseFormProps) =
       });
     } else {
       const selectedCategory = categories.find(c => c.id === categoryId);
+      
+      // Registrar atividade
+      await logActivity({
+        action: "criar",
+        entityType: "Despesa",
+        entityName: selectedCategory?.name || "Sem categoria",
+        details: `R$ ${parseFloat(valor).toFixed(2)} - ${descricao}`,
+      });
+
       toast({
         title: "Gasto adicionado! 🎉",
         description: `R$ ${parseFloat(valor).toFixed(2)} em ${selectedCategory?.name}`,

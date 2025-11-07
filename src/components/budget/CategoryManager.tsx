@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { logActivity } from "@/lib/activity-logger";
 
 interface CategoryManagerProps {
   onBack: () => void;
@@ -88,6 +89,13 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
         variant: "destructive",
       });
     } else {
+      // Registrar atividade
+      await logActivity({
+        action: "criar",
+        entityType: "Categoria",
+        entityName: newCategory.nome,
+      });
+
       toast({
         title: "Categoria adicionada!",
         description: `${newCategory.nome} foi criada com sucesso.`,
@@ -98,6 +106,8 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
   };
 
   const handleDeleteCategory = async (id: string) => {
+    const category = categories.find(c => c.id === id);
+    
     const { error } = await supabase
       .from('categories')
       .delete()
@@ -110,6 +120,13 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
         variant: "destructive",
       });
     } else {
+      // Registrar atividade
+      await logActivity({
+        action: "deletar",
+        entityType: "Categoria",
+        entityName: category?.name || "Categoria",
+      });
+
       toast({
         title: "Categoria deletada",
         description: "A categoria foi removida com sucesso.",
@@ -148,6 +165,13 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
         variant: "destructive",
       });
     } else {
+      // Registrar atividade
+      await logActivity({
+        action: "atualizar",
+        entityType: "Categoria",
+        entityName: editForm.nome,
+      });
+
       toast({
         title: "Categoria atualizada!",
         description: "As alterações foram salvas.",

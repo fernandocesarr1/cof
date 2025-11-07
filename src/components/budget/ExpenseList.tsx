@@ -16,6 +16,7 @@ import {
   FileText
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { logActivity } from "@/lib/activity-logger";
 
 interface ExpenseListProps {
   refreshTrigger?: number;
@@ -59,6 +60,8 @@ const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
   };
 
   const handleDelete = async (id: string) => {
+    const expense = expenses.find(e => e.id === id);
+    
     const { error } = await supabase
       .from('expenses')
       .delete()
@@ -71,6 +74,14 @@ const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
         variant: "destructive",
       });
     } else {
+      // Registrar atividade
+      await logActivity({
+        action: "deletar",
+        entityType: "Despesa",
+        entityName: expense?.categories?.name || "Sem categoria",
+        details: `R$ ${parseFloat(expense?.amount).toFixed(2)} - ${expense?.description}`,
+      });
+
       toast({
         title: "Despesa deletada",
         description: "A despesa foi removida com sucesso.",

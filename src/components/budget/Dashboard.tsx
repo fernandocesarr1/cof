@@ -12,13 +12,16 @@ import {
   Wallet,
   CalendarDays,
   Users,
-  Download
+  Download,
+  Bell
 } from "lucide-react";
 import ExpenseForm from "./ExpenseForm";
 import ExpenseList from "./ExpenseList";
 import StatsOverview from "./StatsOverview";
 import ChartsSection from "./ChartsSection";
 import CategoryManager from "./CategoryManager";
+import Notifications from "./Notifications";
+import SettingsComponent from "./Settings";
 
 interface DashboardProps {
   onLogout: () => void;
@@ -61,8 +64,8 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
       {/* Main Content */}
       <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-          <div className="flex justify-center">
-            <TabsList className="grid grid-cols-4 lg:inline-grid bg-card shadow-md">
+          <div className="flex justify-center overflow-x-auto pb-2">
+            <TabsList className="grid grid-cols-6 lg:inline-grid bg-card shadow-md">
               <TabsTrigger value="add" className="gap-1 sm:gap-2 text-xs sm:text-sm">
                 <PlusCircle className="w-4 h-4" />
                 <span className="hidden sm:inline">Adicionar</span>
@@ -78,6 +81,14 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
               <TabsTrigger value="expenses" className="gap-1 sm:gap-2 text-xs sm:text-sm">
                 <CalendarDays className="w-4 h-4" />
                 <span className="hidden sm:inline">Gastos</span>
+              </TabsTrigger>
+              <TabsTrigger value="notifications" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+                <Bell className="w-4 h-4" />
+                <span className="hidden sm:inline">Notificações</span>
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+                <Settings className="w-4 h-4" />
+                <span className="hidden sm:inline">Config</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -141,6 +152,14 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
 
           <TabsContent value="charts" className="animate-fade-in">
             <ChartsSection />
+          </TabsContent>
+
+          <TabsContent value="notifications" className="animate-fade-in">
+            <Notifications />
+          </TabsContent>
+
+          <TabsContent value="settings" className="animate-fade-in">
+            <SettingsComponent />
           </TabsContent>
         </Tabs>
       </main>

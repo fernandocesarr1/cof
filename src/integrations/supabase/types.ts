@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      activities: {
+        Row: {
+          action: string
+          created_at: string
+          details: string | null
+          entity_name: string
+          entity_type: string
+          id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: string | null
+          entity_name: string
+          entity_type: string
+          id?: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: string | null
+          entity_name?: string
+          entity_type?: string
+          id?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           color: string
