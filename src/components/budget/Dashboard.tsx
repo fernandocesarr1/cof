@@ -32,6 +32,12 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+  const handleExpenseAdded = () => {
+    setRefreshTrigger(prev => prev + 1);
+    // Mudar para aba de gastos para mostrar a nova despesa
+    setActiveTab("expenses");
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -99,7 +105,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
             ) : (
               <ExpenseForm 
                 onManageCategories={() => setShowCategoryManager(true)}
-                onExpenseAdded={() => setRefreshTrigger(prev => prev + 1)}
+                onExpenseAdded={handleExpenseAdded}
               />
             )}
           </TabsContent>

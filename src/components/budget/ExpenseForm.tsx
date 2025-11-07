@@ -88,18 +88,18 @@ const ExpenseForm = ({ onManageCategories, onExpenseAdded }: ExpenseFormProps) =
         details: `R$ ${parseFloat(valor).toFixed(2)} - ${descricao}`,
       });
 
-      toast({
-        title: "Gasto adicionado! 🎉",
-        description: `R$ ${parseFloat(valor).toFixed(2)} em ${selectedCategory?.name}`,
-      });
-
       // Limpar formulário
       setValor("");
       setCategoryId("");
       setDescricao("");
       
-      // Notificar componente pai
+      // Notificar componente pai ANTES do toast para garantir atualização
       onExpenseAdded?.();
+      
+      toast({
+        title: "Gasto adicionado! 🎉",
+        description: `R$ ${parseFloat(valor).toFixed(2)} em ${selectedCategory?.name}`,
+      });
     }
   };
 
