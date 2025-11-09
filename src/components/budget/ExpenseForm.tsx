@@ -18,6 +18,7 @@ interface ExpenseFormProps {
 const ExpenseForm = ({ onManageCategories, onExpenseAdded }: ExpenseFormProps) => {
   const { toast } = useToast();
   const [categories, setCategories] = useState<any[]>([]);
+  const [tipoGasto, setTipoGasto] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [valor, setValor] = useState("");
   const [data, setData] = useState(new Date().toISOString().split('T')[0]);
@@ -25,6 +26,11 @@ const ExpenseForm = ({ onManageCategories, onExpenseAdded }: ExpenseFormProps) =
   const [loading, setLoading] = useState(false);
 
   const nomes = ['Fernando', 'Estefania'];
+
+  // Filtrar categorias baseado no tipo de gasto selecionado
+  const categoriasFiltradas = tipoGasto 
+    ? categories.filter(cat => cat.tipo === tipoGasto)
+    : [];
 
   useEffect(() => {
     loadCategories();
@@ -90,6 +96,7 @@ const ExpenseForm = ({ onManageCategories, onExpenseAdded }: ExpenseFormProps) =
 
       // Limpar formulário
       setValor("");
+      setTipoGasto("");
       setCategoryId("");
       setDescricao("");
       
@@ -118,16 +125,42 @@ const ExpenseForm = ({ onManageCategories, onExpenseAdded }: ExpenseFormProps) =
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
           <div className="space-y-2">
+            <Label htmlFor="tipo-gasto" className="flex items-center gap-2">
+              <Tag className="w-4 h-4" />
+              Tipo de Gasto
+            </Label>
+            <Select 
+              value={tipoGasto} 
+              onValueChange={(value) => {
+                setTipoGasto(value);
+                setCategoryId(""); // Limpar categoria ao mudar o tipo
+              }}
+            >
+              <SelectTrigger id="tipo-gasto" className="h-11 bg-background">
+                <SelectValue placeholder="Selecione o tipo..." />
+              </SelectTrigger>
+              <SelectContent className="bg-background border z-50">
+                <SelectItem value="fixo">Gastos Fixos</SelectItem>
+                <SelectItem value="variavel">Gastos Variáveis</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="categoria" className="flex items-center gap-2">
               <Tag className="w-4 h-4" />
               Categoria
             </Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger id="categoria" className="h-11">
-                <SelectValue placeholder="Selecione..." />
+            <Select 
+              value={categoryId} 
+              onValueChange={setCategoryId}
+              disabled={!tipoGasto}
+            >
+              <SelectTrigger id="categoria" className="h-11 bg-background">
+                <SelectValue placeholder={tipoGasto ? "Selecione a categoria..." : "Selecione o tipo primeiro"} />
               </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
+              <SelectContent className="bg-background border z-50">
+                {categoriasFiltradas.map((cat) => (
                   <SelectItem key={cat.id} value={cat.id}>
                     {cat.name}
                   </SelectItem>
@@ -198,6 +231,7 @@ const ExpenseForm = ({ onManageCategories, onExpenseAdded }: ExpenseFormProps) =
               variant="outline" 
               onClick={() => {
                 setValor("");
+                setTipoGasto("");
                 setCategoryId("");
                 setDescricao("");
               }}
