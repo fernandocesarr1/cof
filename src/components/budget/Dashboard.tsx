@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,6 +22,7 @@ import ChartsSection from "./ChartsSection";
 import CategoryManager from "./CategoryManager";
 import Notifications from "./Notifications";
 import SettingsComponent from "./Settings";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DashboardProps {
   onLogout: () => void;
@@ -31,6 +32,42 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
   const [activeTab, setActiveTab] = useState("add");
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [totalMes, setTotalMes] = useState(0);
+  const [gastosFixos, setGastosFixos] = useState(0);
+  const [gastosVariaveis, setGastosVariaveis] = useState(0);
+
+  useEffect(() => {
+    loadTotals();
+  }, [refreshTrigger]);
+
+  const loadTotals = async () => {
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    
+    const { data: expenses } = await supabase
+      .from('expenses')
+      .select(`
+        *,
+        categories (tipo)
+      `)
+      .gte('date', firstDay.toISOString().split('T')[0])
+      .lte('date', lastDay.toISOString().split('T')[0]);
+    
+    if (expenses) {
+      const total = expenses.reduce((sum, e) => sum + parseFloat(String(e.amount || 0)), 0);
+      const fixos = expenses
+        .filter(e => e.categories?.tipo === 'fixo')
+        .reduce((sum, e) => sum + parseFloat(String(e.amount || 0)), 0);
+      const variaveis = expenses
+        .filter(e => e.categories?.tipo === 'variavel')
+        .reduce((sum, e) => sum + parseFloat(String(e.amount || 0)), 0);
+      
+      setTotalMes(total);
+      setGastosFixos(fixos);
+      setGastosVariaveis(variaveis);
+    }
+  };
 
   const handleExpenseAdded = () => {
     setRefreshTrigger(prev => prev + 1);
@@ -117,8 +154,8 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
                   <p className="text-xs sm:text-sm font-medium text-muted-foreground">Total do Mês</p>
                   <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                 </div>
-                <p className="text-xl sm:text-3xl font-bold text-foreground">R$ 0,00</p>
-                <p className="text-xs text-muted-foreground mt-1">0% do limite</p>
+                <p className="text-xl sm:text-3xl font-bold text-foreground">R$ {totalMes.toFixed(2)}</p>
+                <p className="text-xs text-muted-foreground mt-1">Acumulado</p>
               </Card>
 
               <Card className="p-4 sm:p-6 gradient-card border-none shadow-lg">
@@ -126,8 +163,8 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
                   <p className="text-xs sm:text-sm font-medium text-muted-foreground">Gastos Fixos</p>
                   <CalendarDays className="w-4 h-4 sm:w-5 sm:h-5 text-success" />
                 </div>
-                <p className="text-xl sm:text-3xl font-bold text-foreground">R$ 0,00</p>
-                <p className="text-xs text-muted-foreground mt-1">6 categorias</p>
+                <p className="text-xl sm:text-3xl font-bold text-foreground">R$ {gastosFixos.toFixed(2)}</p>
+                <p className="text-xs text-muted-foreground mt-1">Mês atual</p>
               </Card>
 
               <Card className="p-4 sm:p-6 gradient-card border-none shadow-lg">
@@ -135,21 +172,21 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
                   <p className="text-xs sm:text-sm font-medium text-muted-foreground">Gastos Variáveis</p>
                   <PieChart className="w-4 h-4 sm:w-5 sm:h-5 text-warning" />
                 </div>
-                <p className="text-xl sm:text-3xl font-bold text-foreground">R$ 0,00</p>
-                <p className="text-xs text-muted-foreground mt-1">3 categorias</p>
+                <p className="text-xl sm:text-3xl font-bold text-foreground">R$ {gastosVariaveis.toFixed(2)}</p>
+                <p className="text-xs text-muted-foreground mt-1">Mês atual</p>
               </Card>
 
               <Card className="p-4 sm:p-6 gradient-card border-none shadow-lg">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">Saldo</p>
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">Economia</p>
                   <Users className="w-4 h-4 sm:w-5 sm:h-5 text-secondary" />
                 </div>
                 <p className="text-xl sm:text-3xl font-bold text-foreground">R$ 0,00</p>
-                <p className="text-xs text-muted-foreground mt-1 hidden sm:block">Fernando vs Estefania</p>
+                <p className="text-xs text-muted-foreground mt-1 hidden sm:block">Meta mensal</p>
               </Card>
             </div>
 
-            <StatsOverview />
+            <StatsOverview refreshTrigger={refreshTrigger} />
           </TabsContent>
 
           <TabsContent value="expenses" className="animate-fade-in">
