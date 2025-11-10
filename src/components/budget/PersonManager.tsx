@@ -1,0 +1,240 @@
+import { useState, useEffect } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { ArrowLeft, Users, Plus, Trash2, Edit } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+
+interface PersonManagerProps {
+  onBack: () => void;
+}
+
+const PersonManager = ({ onBack }: PersonManagerProps) => {
+  const { toast } = useToast();
+  const [people, setPeople] = useState<any[]>([]);
+  const [name, setName] = useState("");
+  const [color, setColor] = useState("#8B5CF6");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const colors = [
+    "#8B5CF6", "#EC4899", "#3B82F6", "#10B981", 
+    "#F59E0B", "#EF4444", "#6366F1", "#14B8A6"
+  ];
+
+  useEffect(() => {
+    loadPeople();
+  }, []);
+
+  const loadPeople = async () => {
+    const { data, error } = await supabase
+      .from('people')
+      .select('*')
+      .order('name');
+    
+    if (error) {
+      toast({
+        title: "Erro ao carregar pessoas",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      setPeople(data || []);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!name.trim()) {
+      toast({
+        title: "Nome obrigatório",
+        description: "Digite um nome para a pessoa.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    if (editingId) {
+      const { error } = await supabase
+        .from('people')
+        .update({ name, color })
+        .eq('id', editingId);
+
+      if (error) {
+        toast({
+          title: "Erro ao atualizar pessoa",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Pessoa atualizada!",
+          description: `${name} foi atualizado com sucesso.`,
+        });
+        setEditingId(null);
+      }
+    } else {
+      const { error } = await supabase
+        .from('people')
+        .insert({ name, color });
+
+      if (error) {
+        toast({
+          title: "Erro ao adicionar pessoa",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Pessoa adicionada!",
+          description: `${name} foi adicionado com sucesso.`,
+        });
+      }
+    }
+
+    setLoading(false);
+    setName("");
+    setColor("#8B5CF6");
+    loadPeople();
+  };
+
+  const handleEdit = (person: any) => {
+    setName(person.name);
+    setColor(person.color);
+    setEditingId(person.id);
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    const { error } = await supabase
+      .from('people')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      toast({
+        title: "Erro ao deletar pessoa",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Pessoa deletada",
+        description: `${name} foi removido com sucesso.`,
+      });
+      loadPeople();
+    }
+  };
+
+  return (
+    <div className="space-y-4 sm:space-y-6">
+      <Button
+        variant="ghost"
+        onClick={onBack}
+        className="gap-2"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Voltar
+      </Button>
+
+      <Card className="p-4 sm:p-6 shadow-lg gradient-card">
+        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 gradient-primary rounded-lg sm:rounded-xl flex items-center justify-center">
+            <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+          </div>
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-foreground">Gerenciar Pessoas</h2>
+            <p className="text-xs sm:text-sm text-muted-foreground">Adicione ou edite pessoas</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4 mb-6">
+          <div className="space-y-2">
+            <Label htmlFor="name">Nome</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Digite o nome..."
+              className="h-11"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Cor</Label>
+            <div className="flex gap-2 flex-wrap">
+              {colors.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setColor(c)}
+                  className={`w-10 h-10 rounded-lg transition-all ${
+                    color === c ? "ring-2 ring-offset-2 ring-primary scale-110" : ""
+                  }`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <Button 
+            type="submit" 
+            className="w-full h-11 gradient-primary"
+            disabled={loading}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            {editingId ? "Atualizar Pessoa" : "Adicionar Pessoa"}
+          </Button>
+        </form>
+
+        <div className="space-y-2">
+          <h3 className="font-semibold text-foreground mb-3">Pessoas Cadastradas</h3>
+          {people.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              Nenhuma pessoa cadastrada ainda
+            </p>
+          ) : (
+            people.map((person) => (
+              <div
+                key={person.id}
+                className="flex items-center justify-between p-3 bg-background/50 rounded-lg border"
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-8 h-8 rounded-full"
+                    style={{ backgroundColor: person.color }}
+                  />
+                  <span className="font-medium text-foreground">{person.name}</span>
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleEdit(person)}
+                    className="h-8 w-8"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDelete(person.id, person.name)}
+                    className="h-8 w-8 hover:bg-danger/10 hover:text-danger"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+};
+
+export default PersonManager;

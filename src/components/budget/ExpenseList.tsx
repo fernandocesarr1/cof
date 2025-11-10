@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-logger";
+import ExpenseEditDialog from "./ExpenseEditDialog";
 
 interface ExpenseListProps {
   refreshTrigger?: number;
@@ -27,6 +28,8 @@ const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingExpense, setEditingExpense] = useState<any>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   useEffect(() => {
     loadExpenses();
@@ -41,10 +44,17 @@ const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
         categories (
           id,
           name,
+          color,
+          tipo
+        ),
+        people (
+          id,
+          name,
           color
         )
       `)
-      .order('date', { ascending: false });
+      .order('date', { ascending: true })
+      .order('created_at', { ascending: true });
 
     setLoading(false);
 
@@ -80,6 +90,7 @@ const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
         entityType: "Despesa",
         entityName: expense?.categories?.name || "Sem categoria",
         details: `R$ ${parseFloat(expense?.amount).toFixed(2)} - ${expense?.description}`,
+        personId: expense?.person_id,
       });
 
       toast({
@@ -95,9 +106,15 @@ const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
     return (
       expense.categories?.name?.toLowerCase().includes(query) ||
       expense.description?.toLowerCase().includes(query) ||
+      expense.people?.name?.toLowerCase().includes(query) ||
       expense.amount?.toString().includes(query)
     );
   });
+
+  const handleEdit = (expense: any) => {
+    setEditingExpense(expense);
+    setEditDialogOpen(true);
+  };
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -129,49 +146,59 @@ const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
             <p className="text-muted-foreground">Carregando...</p>
           </div>
         ) : (
-          <div className="space-y-2 sm:space-y-3">
+          <div className="space-y-1.5">
             {filteredExpenses.map((expense) => (
               <Card 
                 key={expense.id} 
-                className="p-3 sm:p-4 hover:shadow-md transition-all duration-300 border-l-4"
+                className="p-2 hover:shadow-md transition-all duration-300 border-l-4"
                 style={{
                   borderLeftColor: expense.categories?.color || "hsl(var(--primary))"
                 }}
               >
-                <div className="flex flex-col sm:flex-row sm:items-start gap-3">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <span className="font-semibold text-base sm:text-lg text-foreground">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-semibold text-sm text-foreground truncate">
                         {expense.categories?.name || "Sem categoria"}
                       </span>
+                      {expense.people && (
+                        <div 
+                          className="w-4 h-4 rounded-full flex-shrink-0" 
+                          style={{ backgroundColor: expense.people.color }}
+                          title={expense.people.name}
+                        />
+                      )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 sm:gap-3 text-xs sm:text-sm">
-                      <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
-                        <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                        <span className="font-bold text-foreground">
-                          R$ {parseFloat(expense.amount).toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
-                        <Calendar className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                        <span className="truncate">{new Date(expense.date + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground col-span-2">
-                        <FileText className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                        <span className="truncate">{expense.description}</span>
-                      </div>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <span className="font-bold text-foreground">
+                        R$ {parseFloat(expense.amount).toFixed(2)}
+                      </span>
+                      <span className="truncate">
+                        {new Date(expense.date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                      </span>
+                      <span className="truncate flex-1 min-w-0">
+                        {expense.description}
+                      </span>
                     </div>
                   </div>
 
-                  <div className="flex gap-1 sm:gap-2 self-end sm:self-start">
+                  <div className="flex gap-1 flex-shrink-0">
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      className="h-8 w-8 hover:bg-danger/10 hover:text-danger"
+                      className="h-7 w-7 hover:bg-primary/10"
+                      onClick={() => handleEdit(expense)}
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-7 w-7 hover:bg-danger/10 hover:text-danger"
                       onClick={() => handleDelete(expense.id)}
                     >
-                      <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
                 </div>
@@ -189,6 +216,13 @@ const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
           </div>
         )}
       </Card>
+
+      <ExpenseEditDialog
+        expense={editingExpense}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onExpenseUpdated={loadExpenses}
+      />
     </div>
   );
 };

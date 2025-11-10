@@ -22,6 +22,7 @@ export type Database = {
           entity_name: string
           entity_type: string
           id: string
+          person_id: string | null
         }
         Insert: {
           action: string
@@ -30,6 +31,7 @@ export type Database = {
           entity_name: string
           entity_type: string
           id?: string
+          person_id?: string | null
         }
         Update: {
           action?: string
@@ -38,8 +40,17 @@ export type Database = {
           entity_name?: string
           entity_type?: string
           id?: string
+          person_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "activities_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       categories: {
         Row: {
@@ -68,6 +79,41 @@ export type Database = {
         }
         Relationships: []
       }
+      category_budgets: {
+        Row: {
+          amount: number
+          category_id: string
+          created_at: string
+          id: string
+          month: number
+          year: number
+        }
+        Insert: {
+          amount: number
+          category_id: string
+          created_at?: string
+          id?: string
+          month: number
+          year: number
+        }
+        Update: {
+          amount?: number
+          category_id?: string
+          created_at?: string
+          id?: string
+          month?: number
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_budgets_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount: number
@@ -76,6 +122,7 @@ export type Database = {
           date: string
           description: string
           id: string
+          person_id: string | null
         }
         Insert: {
           amount: number
@@ -84,6 +131,7 @@ export type Database = {
           date?: string
           description: string
           id?: string
+          person_id?: string | null
         }
         Update: {
           amount?: number
@@ -92,6 +140,7 @@ export type Database = {
           date?: string
           description?: string
           id?: string
+          person_id?: string | null
         }
         Relationships: [
           {
@@ -101,7 +150,35 @@ export type Database = {
             referencedRelation: "categories"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "expenses_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      people: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
       }
     }
     Views: {

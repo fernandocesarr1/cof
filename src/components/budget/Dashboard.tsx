@@ -21,7 +21,9 @@ import StatsOverview from "./StatsOverview";
 import ChartsSection from "./ChartsSection";
 import CategoryManager from "./CategoryManager";
 import Notifications from "./Notifications";
+import PersonManager from "./PersonManager";
 import SettingsComponent from "./Settings";
+import MonthYearSelector from "./MonthYearSelector";
 import { supabase } from "@/integrations/supabase/client";
 
 interface DashboardProps {
@@ -31,25 +33,29 @@ interface DashboardProps {
 const Dashboard = ({ onLogout }: DashboardProps) => {
   const [activeTab, setActiveTab] = useState("add");
   const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [showPersonManager, setShowPersonManager] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [totalMes, setTotalMes] = useState(0);
   const [gastosFixos, setGastosFixos] = useState(0);
   const [gastosVariaveis, setGastosVariaveis] = useState(0);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [peopleData, setPeopleData] = useState<any[]>([]);
 
   useEffect(() => {
     loadTotals();
-  }, [refreshTrigger]);
+  }, [refreshTrigger, selectedMonth, selectedYear]);
 
   const loadTotals = async () => {
-    const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const firstDay = new Date(selectedYear, selectedMonth, 1);
+    const lastDay = new Date(selectedYear, selectedMonth + 1, 0);
     
     const { data: expenses } = await supabase
       .from('expenses')
       .select(`
         *,
-        categories (tipo)
+        categories (tipo),
+        people (id, name)
       `)
       .gte('date', firstDay.toISOString().split('T')[0])
       .lte('date', lastDay.toISOString().split('T')[0]);
@@ -66,13 +72,22 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
       setTotalMes(total);
       setGastosFixos(fixos);
       setGastosVariaveis(variaveis);
+      
+      // Calcular gastos por pessoa
+      const peopleMap = new Map();
+      expenses.forEach(e => {
+        if (e.people?.id) {
+          const current = peopleMap.get(e.people.id) || { name: e.people.name, value: 0 };
+          current.value += parseFloat(String(e.amount || 0));
+          peopleMap.set(e.people.id, current);
+        }
+      });
+      setPeopleData(Array.from(peopleMap.values()));
     }
   };
 
   const handleExpenseAdded = () => {
     setRefreshTrigger(prev => prev + 1);
-    // Mudar para aba de gastos para mostrar a nova despesa
-    setActiveTab("expenses");
   };
 
   return (
@@ -139,15 +154,27 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
           <TabsContent value="add" className="animate-fade-in">
             {showCategoryManager ? (
               <CategoryManager onBack={() => setShowCategoryManager(false)} />
+            ) : showPersonManager ? (
+              <PersonManager onBack={() => setShowPersonManager(false)} />
             ) : (
               <ExpenseForm 
                 onManageCategories={() => setShowCategoryManager(true)}
+                onManagePeople={() => setShowPersonManager(true)}
                 onExpenseAdded={handleExpenseAdded}
               />
             )}
           </TabsContent>
 
           <TabsContent value="dashboard" className="space-y-4 sm:space-y-6 animate-fade-in">
+            <div className="flex justify-end mb-4">
+              <MonthYearSelector
+                selectedMonth={selectedMonth}
+                selectedYear={selectedYear}
+                onMonthChange={setSelectedMonth}
+                onYearChange={setSelectedYear}
+              />
+            </div>
+            
             <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
               <Card className="p-4 sm:p-6 gradient-card border-none shadow-lg">
                 <div className="flex items-center justify-between mb-2">
@@ -178,15 +205,29 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
 
               <Card className="p-4 sm:p-6 gradient-card border-none shadow-lg">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">Economia</p>
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">Diferença</p>
                   <Users className="w-4 h-4 sm:w-5 sm:h-5 text-secondary" />
                 </div>
-                <p className="text-xl sm:text-3xl font-bold text-foreground">R$ 0,00</p>
-                <p className="text-xs text-muted-foreground mt-1 hidden sm:block">Meta mensal</p>
+                <p className="text-xl sm:text-3xl font-bold text-foreground">
+                  {peopleData.length === 2 
+                    ? `R$ ${Math.abs(peopleData[0].value - peopleData[1].value).toFixed(2)}`
+                    : 'R$ 0,00'
+                  }
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {peopleData.length === 2 && peopleData[0].value !== peopleData[1].value
+                    ? `${peopleData[0].value < peopleData[1].value ? peopleData[0].name : peopleData[1].name} gastou menos`
+                    : 'Gastos iguais'
+                  }
+                </p>
               </Card>
             </div>
 
-            <StatsOverview refreshTrigger={refreshTrigger} />
+            <StatsOverview 
+              refreshTrigger={refreshTrigger} 
+              selectedMonth={selectedMonth}
+              selectedYear={selectedYear}
+            />
           </TabsContent>
 
           <TabsContent value="expenses" className="animate-fade-in">

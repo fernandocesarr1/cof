@@ -12,6 +12,11 @@ interface Activity {
   entity_name: string;
   details: string | null;
   created_at: string;
+  person_id: string | null;
+  people?: {
+    name: string;
+    color: string;
+  };
 }
 
 const Notifications = () => {
@@ -26,7 +31,10 @@ const Notifications = () => {
     try {
       const { data, error } = await supabase
         .from("activities")
-        .select("*")
+        .select(`
+          *,
+          people (name, color)
+        `)
         .order("created_at", { ascending: false })
         .limit(50);
 
@@ -118,11 +126,22 @@ const Notifications = () => {
                         <span className="text-muted-foreground"> - {activity.details}</span>
                       )}
                     </p>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
-                      <Calendar className="w-3 h-3" />
-                      {format(new Date(activity.created_at), "dd/MM/yyyy 'às' HH:mm", {
-                        locale: ptBR,
-                      })}
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {format(new Date(activity.created_at), "dd/MM/yyyy 'às' HH:mm", {
+                          locale: ptBR,
+                        })}
+                      </div>
+                      {activity.people && (
+                        <div className="flex items-center gap-1">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: activity.people.color }}
+                          />
+                          <span>{activity.people.name}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -8,6 +8,7 @@ interface LogActivityParams {
   entityType: EntityType;
   entityName: string;
   details?: string;
+  personId?: string;
 }
 
 export const logActivity = async ({
@@ -15,6 +16,7 @@ export const logActivity = async ({
   entityType,
   entityName,
   details,
+  personId,
 }: LogActivityParams) => {
   try {
     await supabase.from("activities").insert({
@@ -22,6 +24,7 @@ export const logActivity = async ({
       entity_type: entityType,
       entity_name: entityName,
       details: details || null,
+      person_id: personId || null,
     });
   } catch (error) {
     console.error("Erro ao registrar atividade:", error);

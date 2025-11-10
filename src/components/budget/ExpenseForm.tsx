@@ -12,20 +12,21 @@ import { logActivity } from "@/lib/activity-logger";
 
 interface ExpenseFormProps {
   onManageCategories: () => void;
+  onManagePeople: () => void;
   onExpenseAdded?: () => void;
 }
 
-const ExpenseForm = ({ onManageCategories, onExpenseAdded }: ExpenseFormProps) => {
+const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: ExpenseFormProps) => {
   const { toast } = useToast();
   const [categories, setCategories] = useState<any[]>([]);
+  const [people, setPeople] = useState<any[]>([]);
   const [tipoGasto, setTipoGasto] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [personId, setPersonId] = useState("");
   const [valor, setValor] = useState("");
   const [data, setData] = useState(new Date().toISOString().split('T')[0]);
   const [descricao, setDescricao] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const nomes = ['Fernando', 'Estefania'];
 
   // Filtrar categorias baseado no tipo de gasto selecionado
   const categoriasFiltradas = tipoGasto 
@@ -34,6 +35,7 @@ const ExpenseForm = ({ onManageCategories, onExpenseAdded }: ExpenseFormProps) =
 
   useEffect(() => {
     loadCategories();
+    loadPeople();
   }, []);
 
   const loadCategories = async () => {
@@ -53,10 +55,27 @@ const ExpenseForm = ({ onManageCategories, onExpenseAdded }: ExpenseFormProps) =
     }
   };
 
+  const loadPeople = async () => {
+    const { data, error } = await supabase
+      .from('people')
+      .select('*')
+      .order('name');
+    
+    if (error) {
+      toast({
+        title: "Erro ao carregar pessoas",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      setPeople(data || []);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!valor || !categoryId || !descricao) {
+    if (!valor || !categoryId || !descricao || !personId) {
       toast({
         title: "Campos obrigatórios",
         description: "Preencha todos os campos para adicionar um gasto.",
@@ -72,6 +91,7 @@ const ExpenseForm = ({ onManageCategories, onExpenseAdded }: ExpenseFormProps) =
         description: descricao,
         amount: parseFloat(valor),
         category_id: categoryId,
+        person_id: personId,
         date: data
       });
 
@@ -92,15 +112,17 @@ const ExpenseForm = ({ onManageCategories, onExpenseAdded }: ExpenseFormProps) =
         entityType: "Despesa",
         entityName: selectedCategory?.name || "Sem categoria",
         details: `R$ ${parseFloat(valor).toFixed(2)} - ${descricao}`,
+        personId: personId,
       });
 
       // Limpar formulário
       setValor("");
       setTipoGasto("");
       setCategoryId("");
+      setPersonId("");
       setDescricao("");
       
-      // Notificar componente pai ANTES do toast para garantir atualização
+      // Notificar componente pai
       onExpenseAdded?.();
       
       toast({
@@ -200,6 +222,24 @@ const ExpenseForm = ({ onManageCategories, onExpenseAdded }: ExpenseFormProps) =
             />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="pessoa" className="flex items-center gap-2">
+              <User className="w-4 h-4" />
+              Pessoa
+            </Label>
+            <Select value={personId} onValueChange={setPersonId}>
+              <SelectTrigger id="pessoa" className="h-11 bg-background">
+                <SelectValue placeholder="Quem fez o gasto?" />
+              </SelectTrigger>
+              <SelectContent className="bg-background border z-50">
+                {people.map((person) => (
+                  <SelectItem key={person.id} value={person.id}>
+                    {person.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="descricao" className="flex items-center gap-2">
@@ -233,6 +273,7 @@ const ExpenseForm = ({ onManageCategories, onExpenseAdded }: ExpenseFormProps) =
                 setValor("");
                 setTipoGasto("");
                 setCategoryId("");
+                setPersonId("");
                 setDescricao("");
               }}
               className="h-12"
@@ -240,14 +281,24 @@ const ExpenseForm = ({ onManageCategories, onExpenseAdded }: ExpenseFormProps) =
               Limpar
             </Button>
           </div>
-          <button
-            type="button"
-            onClick={onManageCategories}
-            className="text-sm text-primary hover:underline flex items-center gap-1 mx-auto"
-          >
-            <Settings className="w-3 h-3" />
-            Gerenciar Categorias
-          </button>
+          <div className="flex gap-4 justify-center">
+            <button
+              type="button"
+              onClick={onManageCategories}
+              className="text-sm text-primary hover:underline flex items-center gap-1"
+            >
+              <Settings className="w-3 h-3" />
+              Gerenciar Categorias
+            </button>
+            <button
+              type="button"
+              onClick={onManagePeople}
+              className="text-sm text-primary hover:underline flex items-center gap-1"
+            >
+              <User className="w-3 h-3" />
+              Gerenciar Pessoas
+            </button>
+          </div>
         </div>
       </form>
     </Card>
