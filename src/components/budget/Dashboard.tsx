@@ -38,15 +38,18 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
   const [totalMes, setTotalMes] = useState(0);
   const [gastosFixos, setGastosFixos] = useState(0);
   const [gastosVariaveis, setGastosVariaveis] = useState(0);
+  const [totalAno, setTotalAno] = useState(0);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [peopleData, setPeopleData] = useState<any[]>([]);
+  const [peopleDataYear, setPeopleDataYear] = useState<any[]>([]);
 
   useEffect(() => {
     loadTotals();
   }, [refreshTrigger, selectedMonth, selectedYear]);
 
   const loadTotals = async () => {
+    // Dados do mês
     const firstDay = new Date(selectedYear, selectedMonth, 1);
     const lastDay = new Date(selectedYear, selectedMonth + 1, 0);
     
@@ -73,7 +76,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
       setGastosFixos(fixos);
       setGastosVariaveis(variaveis);
       
-      // Calcular gastos por pessoa
+      // Calcular gastos por pessoa no mês
       const peopleMap = new Map();
       expenses.forEach(e => {
         if (e.people?.id) {
@@ -83,6 +86,35 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
         }
       });
       setPeopleData(Array.from(peopleMap.values()));
+    }
+
+    // Dados do ano
+    const firstDayYear = new Date(selectedYear, 0, 1);
+    const lastDayYear = new Date(selectedYear, 11, 31);
+    
+    const { data: expensesYear } = await supabase
+      .from('expenses')
+      .select(`
+        *,
+        people (id, name)
+      `)
+      .gte('date', firstDayYear.toISOString().split('T')[0])
+      .lte('date', lastDayYear.toISOString().split('T')[0]);
+    
+    if (expensesYear) {
+      const totalYear = expensesYear.reduce((sum, e) => sum + parseFloat(String(e.amount || 0)), 0);
+      setTotalAno(totalYear);
+      
+      // Calcular gastos por pessoa no ano
+      const peopleMapYear = new Map();
+      expensesYear.forEach(e => {
+        if (e.people?.id) {
+          const current = peopleMapYear.get(e.people.id) || { name: e.people.name, value: 0 };
+          current.value += parseFloat(String(e.amount || 0));
+          peopleMapYear.set(e.people.id, current);
+        }
+      });
+      setPeopleDataYear(Array.from(peopleMapYear.values()));
     }
   };
 
@@ -175,7 +207,16 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
               />
             </div>
             
-            <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-3">
+              <Card className="p-4 sm:p-6 gradient-card border-none shadow-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">Total do Ano</p>
+                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                </div>
+                <p className="text-xl sm:text-3xl font-bold text-foreground">R$ {totalAno.toFixed(2)}</p>
+                <p className="text-xs text-muted-foreground mt-1">Acumulado {selectedYear}</p>
+              </Card>
+
               <Card className="p-4 sm:p-6 gradient-card border-none shadow-lg">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs sm:text-sm font-medium text-muted-foreground">Total do Mês</p>
@@ -205,7 +246,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
 
               <Card className="p-4 sm:p-6 gradient-card border-none shadow-lg">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">Diferença</p>
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">Diferença Mês</p>
                   <Users className="w-4 h-4 sm:w-5 sm:h-5 text-secondary" />
                 </div>
                 <p className="text-xl sm:text-3xl font-bold text-foreground">
@@ -217,6 +258,25 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
                 <p className="text-xs text-muted-foreground mt-1">
                   {peopleData.length === 2 && peopleData[0].value !== peopleData[1].value
                     ? `${peopleData[0].value < peopleData[1].value ? peopleData[0].name : peopleData[1].name} gastou menos`
+                    : 'Gastos iguais'
+                  }
+                </p>
+              </Card>
+
+              <Card className="p-4 sm:p-6 gradient-card border-none shadow-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">Diferença Ano</p>
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 text-secondary" />
+                </div>
+                <p className="text-xl sm:text-3xl font-bold text-foreground">
+                  {peopleDataYear.length === 2 
+                    ? `R$ ${Math.abs(peopleDataYear[0].value - peopleDataYear[1].value).toFixed(2)}`
+                    : 'R$ 0,00'
+                  }
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {peopleDataYear.length === 2 && peopleDataYear[0].value !== peopleDataYear[1].value
+                    ? `${peopleDataYear[0].value < peopleDataYear[1].value ? peopleDataYear[0].name : peopleDataYear[1].name} gastou menos`
                     : 'Gastos iguais'
                   }
                 </p>

@@ -147,6 +147,25 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
           <div className="space-y-2">
+            <Label htmlFor="pessoa" className="flex items-center gap-2">
+              <User className="w-4 h-4" />
+              Pessoa
+            </Label>
+            <Select value={personId} onValueChange={setPersonId}>
+              <SelectTrigger id="pessoa" className="h-11 bg-background">
+                <SelectValue placeholder="Quem fez o gasto?" />
+              </SelectTrigger>
+              <SelectContent className="bg-background border z-50">
+                {people.map((person) => (
+                  <SelectItem key={person.id} value={person.id}>
+                    {person.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="tipo-gasto" className="flex items-center gap-2">
               <Tag className="w-4 h-4" />
               Tipo de Gasto
@@ -220,25 +239,6 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
               onChange={(e) => setData(e.target.value)}
               className="h-11"
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="pessoa" className="flex items-center gap-2">
-              <User className="w-4 h-4" />
-              Pessoa
-            </Label>
-            <Select value={personId} onValueChange={setPersonId}>
-              <SelectTrigger id="pessoa" className="h-11 bg-background">
-                <SelectValue placeholder="Quem fez o gasto?" />
-              </SelectTrigger>
-              <SelectContent className="bg-background border z-50">
-                {people.map((person) => (
-                  <SelectItem key={person.id} value={person.id}>
-                    {person.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           <div className="space-y-2 md:col-span-2">
