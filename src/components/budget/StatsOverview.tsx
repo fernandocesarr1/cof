@@ -183,16 +183,25 @@ const StatsOverview = ({ refreshTrigger, selectedMonth, selectedYear }: StatsOve
             </div>
           </div>
           <div className="h-2 bg-muted rounded-full overflow-hidden">
-            <div 
-              className={`h-full ${getProgressColor(percentage)} rounded-full transition-all`}
-              style={{ width: `${Math.min(percentage, 100)}%` }}
-            />
-            {percentage > 100 && (
-              <div 
-                className="h-full bg-danger/50 rounded-full transition-all"
-                style={{ width: `${Math.min(percentage - 100, 100)}%` }}
-              />
-            )}
+            <div className="flex h-full">
+              {percentage <= 100 ? (
+                <div 
+                  className={`h-full ${getProgressColor(percentage)} rounded-full transition-all`}
+                  style={{ width: `${percentage}%` }}
+                />
+              ) : (
+                <>
+                  <div 
+                    className="h-full bg-success transition-all"
+                    style={{ width: `${(100 / percentage) * 100}%` }}
+                  />
+                  <div 
+                    className="h-full bg-danger transition-all"
+                    style={{ width: `${((percentage - 100) / percentage) * 100}%` }}
+                  />
+                </>
+              )}
+            </div>
           </div>
           {percentage >= 100 && (
             <p className="text-xs text-danger">
