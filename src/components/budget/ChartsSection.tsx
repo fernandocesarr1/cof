@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { TrendingUp, PieChart as PieChartIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import MonthYearSelector from "./MonthYearSelector";
 
 const ChartsSection = () => {
@@ -14,10 +13,10 @@ const ChartsSection = () => {
   const [categoryData, setCategoryData] = useState<any[]>([]);
   const [peopleMonthlyData, setPeopleMonthlyData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'all' | 'single'>('all');
-  const [chartType, setChartType] = useState<'pie' | 'bar'>('pie');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedPerson, setSelectedPerson] = useState<string>('all');
   const [categories, setCategories] = useState<any[]>([]);
+  const [people, setPeople] = useState<any[]>([]);
   const [singleCategoryData, setSingleCategoryData] = useState<any[]>([]);
 
   const COLORS = ['#8B5CF6', '#EC4899', '#3B82F6', '#10B981', '#F59E0B', '#EF4444'];
@@ -28,7 +27,7 @@ const ChartsSection = () => {
 
   useEffect(() => {
     loadCategoryData();
-  }, [categoryMonth, categoryYear, viewMode, selectedCategory]);
+  }, [categoryMonth, categoryYear, selectedCategory, selectedPerson]);
 
   const loadChartData = async () => {
     setLoading(true);
@@ -40,6 +39,13 @@ const ChartsSection = () => {
       .order('name');
     setCategories(categoriesData || []);
     
+    // Carregar pessoas
+    const { data: peopleData } = await supabase
+      .from('people')
+      .select('*')
+      .order('name');
+    setPeople(peopleData || []);
+    
     // Dados mensais do ano selecionado - Total + por pessoa
     const monthlyPromises = Array.from({ length: 12 }, async (_, i) => {
       const firstDay = new Date(selectedYear, i, 1);
@@ -49,7 +55,7 @@ const ChartsSection = () => {
         .from('expenses')
         .select(`
           amount,
-          people (id, name)
+          people (id, name, color)
         `)
         .gte('date', firstDay.toISOString().split('T')[0])
         .lte('date', lastDay.toISOString().split('T')[0]);
@@ -80,34 +86,37 @@ const ChartsSection = () => {
     const monthlyResults = await Promise.all(monthlyPromises);
     setMonthlyData(monthlyResults);
     
-    // Obter nomes únicos de pessoas para o gráfico
-    const allPeopleNames = new Set<string>();
-    monthlyResults.forEach(month => {
-      Object.keys(month).forEach(key => {
-        if (key !== 'month' && key !== 'total') {
-          allPeopleNames.add(key);
-        }
-      });
+    // Obter nomes únicos de pessoas para o gráfico com cores
+    const allPeopleNames = new Map<string, string>();
+    peopleData?.forEach(person => {
+      allPeopleNames.set(person.name, person.color);
     });
-    setPeopleMonthlyData(Array.from(allPeopleNames).map(name => ({ name })));
+    setPeopleMonthlyData(Array.from(allPeopleNames.entries()).map(([name, color]) => ({ name, color })));
     
     setLoading(false);
   };
 
   const loadCategoryData = async () => {
-    if (viewMode === 'all') {
-      // Dados por categoria do mês selecionado
+    if (selectedCategory === 'all') {
+      // Todas as categorias do mês selecionado
       const firstDay = new Date(categoryYear, categoryMonth, 1);
       const lastDay = new Date(categoryYear, categoryMonth + 1, 0);
       
-      const { data: expenses } = await supabase
+      let query = supabase
         .from('expenses')
         .select(`
           amount,
-          categories (name, color)
+          categories (name, color),
+          people (id, name)
         `)
         .gte('date', firstDay.toISOString().split('T')[0])
         .lte('date', lastDay.toISOString().split('T')[0]);
+      
+      if (selectedPerson !== 'all') {
+        query = query.eq('person_id', selectedPerson);
+      }
+      
+      const { data: expenses } = await query;
       
       // Agrupar por categoria
       const categoryMap = new Map();
@@ -122,18 +131,25 @@ const ChartsSection = () => {
         value
       }));
       setCategoryData(catData);
-    } else if (viewMode === 'single' && selectedCategory) {
-      // Dados de uma categoria ao longo do ano
+      setSingleCategoryData([]);
+    } else {
+      // Uma categoria ao longo dos meses do ano
       const monthlyPromises = Array.from({ length: 12 }, async (_, i) => {
         const firstDay = new Date(categoryYear, i, 1);
         const lastDay = new Date(categoryYear, i + 1, 0);
         
-        const { data } = await supabase
+        let query = supabase
           .from('expenses')
           .select('amount')
           .eq('category_id', selectedCategory)
           .gte('date', firstDay.toISOString().split('T')[0])
           .lte('date', lastDay.toISOString().split('T')[0]);
+        
+        if (selectedPerson !== 'all') {
+          query = query.eq('person_id', selectedPerson);
+        }
+        
+        const { data } = await query;
         
         const total = data?.reduce((sum, e) => sum + parseFloat(String(e.amount || 0)), 0) || 0;
         
@@ -145,6 +161,7 @@ const ChartsSection = () => {
       
       const results = await Promise.all(monthlyPromises);
       setSingleCategoryData(results);
+      setCategoryData([]);
     }
   };
 
@@ -185,7 +202,7 @@ const ChartsSection = () => {
           </div>
         </div>
 
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height={window.innerWidth < 640 ? 250 : 300}>
           <LineChart data={monthlyData}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
             <XAxis 
@@ -219,7 +236,7 @@ const ChartsSection = () => {
                 key={person.name}
                 type="monotone" 
                 dataKey={person.name} 
-                stroke={COLORS[index % COLORS.length]}
+                stroke={person.color || COLORS[index % COLORS.length]}
                 strokeWidth={2}
                 strokeDasharray="5 5"
                 name={person.name}
@@ -242,149 +259,92 @@ const ChartsSection = () => {
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
-            <div className="flex gap-2">
-              <Button
-                variant={viewMode === 'all' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setViewMode('all')}
-                className="text-xs"
-              >
-                Todas
-              </Button>
-              <Button
-                variant={viewMode === 'single' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setViewMode('single')}
-                className="text-xs"
-              >
-                Uma Categoria
-              </Button>
-            </div>
+          <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
+            <select 
+              value={selectedCategory} 
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="h-9 px-3 bg-card border border-border rounded-md text-foreground text-sm min-w-[150px]"
+            >
+              <option value="all">Todas as Categorias</option>
+              {categories.map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
 
-            {viewMode === 'all' ? (
-              <div className="flex gap-2">
-                <MonthYearSelector
-                  selectedMonth={categoryMonth}
-                  selectedYear={categoryYear}
-                  onMonthChange={setCategoryMonth}
-                  onYearChange={setCategoryYear}
-                />
-                <div className="flex gap-1">
-                  <Button
-                    variant={chartType === 'pie' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setChartType('pie')}
-                    className="text-xs"
-                  >
-                    Pizza
-                  </Button>
-                  <Button
-                    variant={chartType === 'bar' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setChartType('bar')}
-                    className="text-xs"
-                  >
-                    Barra
-                  </Button>
-                </div>
-              </div>
+            <select 
+              value={selectedPerson} 
+              onChange={(e) => setSelectedPerson(e.target.value)}
+              className="h-9 px-3 bg-card border border-border rounded-md text-foreground text-sm min-w-[150px]"
+            >
+              <option value="all">Todos</option>
+              {people.map(person => (
+                <option key={person.id} value={person.id}>{person.name}</option>
+              ))}
+            </select>
+
+            {selectedCategory === 'all' ? (
+              <MonthYearSelector
+                selectedMonth={categoryMonth}
+                selectedYear={categoryYear}
+                onMonthChange={setCategoryMonth}
+                onYearChange={setCategoryYear}
+              />
             ) : (
-              <div className="flex gap-2 flex-wrap">
-                <select 
-                  value={categoryYear} 
-                  onChange={(e) => setCategoryYear(parseInt(e.target.value))}
-                  className="h-9 px-3 bg-card border border-border rounded-md text-foreground text-sm"
-                >
-                  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
-                    <option key={year} value={year}>{year}</option>
-                  ))}
-                </select>
-                <select 
-                  value={selectedCategory} 
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="h-9 px-3 bg-card border border-border rounded-md text-foreground text-sm flex-1 min-w-[150px]"
-                >
-                  <option value="">Selecione uma categoria</option>
-                  {categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-              </div>
+              <select 
+                value={categoryYear} 
+                onChange={(e) => setCategoryYear(parseInt(e.target.value))}
+                className="h-9 px-3 bg-card border border-border rounded-md text-foreground text-sm"
+              >
+                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
             )}
           </div>
         </div>
 
-        {viewMode === 'all' ? (
+        {selectedCategory === 'all' ? (
           categoryData.length === 0 ? (
             <div className="h-60 sm:h-80 flex items-center justify-center bg-muted/30 rounded-xl">
               <p className="text-muted-foreground text-sm">Nenhum gasto no período selecionado</p>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={window.innerWidth < 640 ? 250 : 300}>
-              {chartType === 'pie' ? (
-                <PieChart>
-                  <Pie
-                    data={categoryData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => 
-                      window.innerWidth < 640 
-                        ? `${(percent * 100).toFixed(0)}%` 
-                        : `${name}: ${(percent * 100).toFixed(0)}%`
-                    }
-                    outerRadius={window.innerWidth < 640 ? 60 : 80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {categoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))', 
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                      fontSize: window.innerWidth < 640 ? '12px' : '14px'
-                    }}
-                    formatter={(value: any) => `R$ ${parseFloat(value).toFixed(2)}`}
-                  />
-                </PieChart>
-              ) : (
-                <BarChart data={categoryData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
-                  <XAxis 
-                    dataKey="name" 
-                    stroke="hsl(var(--muted-foreground))"
-                    style={{ fontSize: window.innerWidth < 640 ? '10px' : '12px' }}
-                    angle={window.innerWidth < 640 ? -45 : 0}
-                    textAnchor={window.innerWidth < 640 ? 'end' : 'middle'}
-                    height={window.innerWidth < 640 ? 60 : 30}
-                  />
-                  <YAxis 
-                    stroke="hsl(var(--muted-foreground))"
-                    style={{ fontSize: window.innerWidth < 640 ? '10px' : '12px' }}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))', 
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                      fontSize: window.innerWidth < 640 ? '12px' : '14px'
-                    }}
-                    formatter={(value: any) => `R$ ${parseFloat(value).toFixed(2)}`}
-                  />
-                  <Bar dataKey="value" fill="hsl(var(--primary))" />
-                </BarChart>
-              )}
+              <PieChart>
+                <Pie
+                  data={categoryData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => 
+                    window.innerWidth < 640 
+                      ? `${(percent * 100).toFixed(0)}%` 
+                      : `${name}: ${(percent * 100).toFixed(0)}%`
+                  }
+                  outerRadius={window.innerWidth < 640 ? 60 : 80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {categoryData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--card))', 
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px',
+                    fontSize: window.innerWidth < 640 ? '12px' : '14px'
+                  }}
+                  formatter={(value: any) => `R$ ${parseFloat(value).toFixed(2)}`}
+                />
+              </PieChart>
             </ResponsiveContainer>
           )
         ) : (
-          !selectedCategory ? (
+          singleCategoryData.length === 0 ? (
             <div className="h-60 sm:h-80 flex items-center justify-center bg-muted/30 rounded-xl">
-              <p className="text-muted-foreground text-sm">Selecione uma categoria</p>
+              <p className="text-muted-foreground text-sm">Nenhum gasto no período selecionado</p>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={window.innerWidth < 640 ? 250 : 300}>
@@ -408,13 +368,11 @@ const ChartsSection = () => {
                   }}
                   formatter={(value: any) => `R$ ${parseFloat(value).toFixed(2)}`}
                 />
-                <Legend wrapperStyle={{ fontSize: window.innerWidth < 640 ? '12px' : '14px' }} />
                 <Line 
                   type="monotone" 
                   dataKey="value" 
                   stroke="hsl(var(--primary))" 
                   strokeWidth={2}
-                  name="Valor"
                 />
               </LineChart>
             </ResponsiveContainer>

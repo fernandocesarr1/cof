@@ -46,6 +46,26 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
 
   useEffect(() => {
     loadTotals();
+    
+    // Realtime subscription para atualizar quando houver mudanças
+    const channel = supabase
+      .channel('expenses-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'expenses'
+        },
+        () => {
+          loadTotals();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [refreshTrigger, selectedMonth, selectedYear]);
 
   const loadTotals = async () => {

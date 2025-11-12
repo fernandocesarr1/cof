@@ -106,41 +106,37 @@ const Notifications = () => {
             {activities.map((activity) => (
               <div
                 key={activity.id}
-                className="p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                className="p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
               >
-                <div className="flex items-start gap-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${getActionColor(activity.action)} bg-background border`}>
+                <div className="flex items-center gap-2">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold ${getActionColor(activity.action)} bg-background border flex-shrink-0`}>
                     {getActionIcon(activity.action)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5 text-sm">
                       <span className={`font-semibold ${getActionColor(activity.action)}`}>
                         {activity.action.charAt(0).toUpperCase() + activity.action.slice(1)}
                       </span>
-                      <span className="text-muted-foreground">•</span>
-                      <span className="text-foreground font-medium">{activity.entity_type}</span>
-                    </div>
-                    <p className="text-sm text-foreground mt-1">
-                      <span className="font-semibold">{activity.entity_name}</span>
+                      <span className="text-foreground font-medium truncate">{activity.entity_name}</span>
                       {activity.details && (
-                        <span className="text-muted-foreground"> - {activity.details}</span>
+                        <span className="text-muted-foreground truncate">- {activity.details}</span>
                       )}
-                    </p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
-                      <div className="flex items-center gap-1">
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                      <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
-                        {format(new Date(activity.created_at), "dd/MM/yyyy 'às' HH:mm", {
+                        {format(new Date(activity.created_at), "dd/MM/yy HH:mm", {
                           locale: ptBR,
                         })}
-                      </div>
+                      </span>
                       {activity.people && (
-                        <div className="flex items-center gap-1">
+                        <span className="flex items-center gap-1">
                           <div 
                             className="w-3 h-3 rounded-full" 
                             style={{ backgroundColor: activity.people.color }}
                           />
-                          <span>{activity.people.name}</span>
-                        </div>
+                          <span className="truncate">{activity.people.name}</span>
+                        </span>
                       )}
                     </div>
                   </div>

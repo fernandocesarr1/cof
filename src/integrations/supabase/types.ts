@@ -161,18 +161,21 @@ export type Database = {
       }
       people: {
         Row: {
+          avatar_url: string | null
           color: string
           created_at: string
           id: string
           name: string
         }
         Insert: {
+          avatar_url?: string | null
           color?: string
           created_at?: string
           id?: string
           name: string
         }
         Update: {
+          avatar_url?: string | null
           color?: string
           created_at?: string
           id?: string

@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Users, Plus, Trash2, Edit } from "lucide-react";
+import { ArrowLeft, Users, Plus, Trash2, Edit, Upload, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface PersonManagerProps {
   onBack: () => void;
@@ -18,6 +19,8 @@ const PersonManager = ({ onBack }: PersonManagerProps) => {
   const [color, setColor] = useState("#8B5CF6");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   const colors = [
     "#8B5CF6", "#EC4899", "#3B82F6", "#10B981", 
@@ -45,6 +48,41 @@ const PersonManager = ({ onBack }: PersonManagerProps) => {
     }
   };
 
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAvatarFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadAvatar = async (personId: string) => {
+    if (!avatarFile) return null;
+
+    const fileExt = avatarFile.name.split('.').pop();
+    const fileName = `${personId}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, avatarFile, { upsert: true });
+
+    if (uploadError) {
+      console.error('Erro ao fazer upload:', uploadError);
+      return null;
+    }
+
+    const { data } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -60,9 +98,17 @@ const PersonManager = ({ onBack }: PersonManagerProps) => {
     setLoading(true);
 
     if (editingId) {
+      let avatarUrl = null;
+      if (avatarFile) {
+        avatarUrl = await uploadAvatar(editingId);
+      }
+
+      const updateData: any = { name, color };
+      if (avatarUrl) updateData.avatar_url = avatarUrl;
+
       const { error } = await supabase
         .from('people')
-        .update({ name, color })
+        .update(updateData)
         .eq('id', editingId);
 
       if (error) {
@@ -79,9 +125,11 @@ const PersonManager = ({ onBack }: PersonManagerProps) => {
         setEditingId(null);
       }
     } else {
-      const { error } = await supabase
+      const { data: newPerson, error } = await supabase
         .from('people')
-        .insert({ name, color });
+        .insert({ name, color })
+        .select()
+        .single();
 
       if (error) {
         toast({
@@ -89,7 +137,18 @@ const PersonManager = ({ onBack }: PersonManagerProps) => {
           description: error.message,
           variant: "destructive",
         });
-      } else {
+      } else if (newPerson) {
+        let avatarUrl = null;
+        if (avatarFile) {
+          avatarUrl = await uploadAvatar(newPerson.id);
+          if (avatarUrl) {
+            await supabase
+              .from('people')
+              .update({ avatar_url: avatarUrl })
+              .eq('id', newPerson.id);
+          }
+        }
+
         toast({
           title: "Pessoa adicionada!",
           description: `${name} foi adicionado com sucesso.`,
@@ -100,6 +159,8 @@ const PersonManager = ({ onBack }: PersonManagerProps) => {
     setLoading(false);
     setName("");
     setColor("#8B5CF6");
+    setAvatarFile(null);
+    setAvatarPreview(null);
     loadPeople();
   };
 
@@ -107,6 +168,7 @@ const PersonManager = ({ onBack }: PersonManagerProps) => {
     setName(person.name);
     setColor(person.color);
     setEditingId(person.id);
+    setAvatarPreview(person.avatar_url);
   };
 
   const handleDelete = async (id: string, name: string) => {
@@ -153,6 +215,33 @@ const PersonManager = ({ onBack }: PersonManagerProps) => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 mb-6">
+          <div className="space-y-2">
+            <Label>Foto</Label>
+            <div className="flex items-center gap-4">
+              <Avatar className="w-20 h-20">
+                <AvatarImage src={avatarPreview || undefined} />
+                <AvatarFallback className="bg-primary/10">
+                  <User className="w-10 h-10 text-primary" />
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <Label htmlFor="avatar" className="cursor-pointer">
+                  <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors border border-primary/20">
+                    <Upload className="w-4 h-4" />
+                    <span className="text-sm">Escolher foto</span>
+                  </div>
+                </Label>
+                <Input
+                  id="avatar"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  className="hidden"
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="name">Nome</Label>
             <Input
@@ -204,10 +293,12 @@ const PersonManager = ({ onBack }: PersonManagerProps) => {
                 className="flex items-center justify-between p-3 bg-background/50 rounded-lg border"
               >
                 <div className="flex items-center gap-3">
-                  <div
-                    className="w-8 h-8 rounded-full"
-                    style={{ backgroundColor: person.color }}
-                  />
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage src={person.avatar_url || undefined} />
+                    <AvatarFallback style={{ backgroundColor: person.color }}>
+                      <User className="w-5 h-5 text-white" />
+                    </AvatarFallback>
+                  </Avatar>
                   <span className="font-medium text-foreground">{person.name}</span>
                 </div>
                 <div className="flex gap-1">
