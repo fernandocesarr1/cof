@@ -85,14 +85,14 @@ const Notifications = () => {
 
   return (
     <div className="space-y-4">
-      <Card className="p-6">
-        <div className="flex items-center gap-3 mb-6">
+      <Card className="p-4 sm:p-6">
+        <div className="flex items-center gap-3 mb-4 sm:mb-6">
           <div className="w-10 h-10 gradient-primary rounded-lg flex items-center justify-center">
             <Bell className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-foreground">Notificações</h2>
-            <p className="text-sm text-muted-foreground">Histórico de atividades</p>
+            <h2 className="text-lg sm:text-xl font-bold text-foreground">Notificações</h2>
+            <p className="text-xs sm:text-sm text-muted-foreground">Histórico de atividades</p>
           </div>
         </div>
 
@@ -106,14 +106,14 @@ const Notifications = () => {
             {activities.map((activity) => (
               <div
                 key={activity.id}
-                className="p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                className="p-2 sm:p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
               >
-                <div className="flex items-center gap-2">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold ${getActionColor(activity.action)} bg-background border flex-shrink-0`}>
+                <div className="flex items-start gap-2">
+                  <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold ${getActionColor(activity.action)} bg-background border flex-shrink-0 mt-0.5`}>
                     {getActionIcon(activity.action)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 text-sm">
+                    <div className="flex flex-wrap items-center gap-1 text-xs sm:text-sm">
                       <span className={`font-semibold ${getActionColor(activity.action)}`}>
                         {activity.action.charAt(0).toUpperCase() + activity.action.slice(1)}
                       </span>
@@ -122,17 +122,17 @@ const Notifications = () => {
                         <span className="text-muted-foreground truncate">- {activity.details}</span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {format(new Date(activity.created_at), "dd/MM/yy HH:mm", {
+                    <div className="flex flex-wrap items-center gap-2 text-[10px] sm:text-xs text-muted-foreground mt-0.5">
+                      <span className="flex items-center gap-1 whitespace-nowrap">
+                        <Calendar className="w-3 h-3 flex-shrink-0" />
+                        {format(new Date(activity.created_at), "dd/MM HH:mm", {
                           locale: ptBR,
                         })}
                       </span>
                       {activity.people && (
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-1 whitespace-nowrap">
                           <div 
-                            className="w-3 h-3 rounded-full" 
+                            className="w-2 h-2 sm:w-3 sm:h-3 rounded-full flex-shrink-0" 
                             style={{ backgroundColor: activity.people.color }}
                           />
                           <span className="truncate">{activity.people.name}</span>
