@@ -9,6 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { PlusCircle, DollarSign, Calendar, FileText, User, Tag, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-logger";
+import ExpenseImport from "./ExpenseImport";
+import * as LucideIcons from "lucide-react";
 
 interface ExpenseFormProps {
   onManageCategories: () => void;
@@ -132,176 +134,193 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
     }
   };
 
+  const getIconComponent = (iconName: string) => {
+    const Icon = LucideIcons[iconName as keyof typeof LucideIcons] as any;
+    return Icon || LucideIcons.Tag;
+  };
+
   return (
-    <Card className="max-w-2xl mx-auto p-4 sm:p-6 md:p-8 shadow-lg gradient-card">
-      <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-        <div className="w-10 h-10 sm:w-12 sm:h-12 gradient-primary rounded-lg sm:rounded-xl flex items-center justify-center">
-          <PlusCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+    <div className="space-y-6">
+      <Card className="max-w-2xl mx-auto p-4 sm:p-6 md:p-8 shadow-lg gradient-card">
+        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 gradient-primary rounded-lg sm:rounded-xl flex items-center justify-center">
+            <PlusCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+          </div>
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-foreground">Adicionar Gasto</h2>
+            <p className="text-xs sm:text-sm text-muted-foreground">Registre uma nova despesa</p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-foreground">Adicionar Gasto</h2>
-          <p className="text-xs sm:text-sm text-muted-foreground">Registre uma nova despesa</p>
-        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+          <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="pessoa" className="flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Pessoa
+              </Label>
+              <Select value={personId} onValueChange={setPersonId}>
+                <SelectTrigger id="pessoa" className="h-11 bg-background">
+                  <SelectValue placeholder="Quem fez o gasto?" />
+                </SelectTrigger>
+                <SelectContent className="bg-background border z-50">
+                  {people.map((person) => (
+                    <SelectItem key={person.id} value={person.id}>
+                      {person.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="tipo-gasto" className="flex items-center gap-2">
+                <Tag className="w-4 h-4" />
+                Tipo de Gasto
+              </Label>
+              <Select 
+                value={tipoGasto} 
+                onValueChange={(value) => {
+                  setTipoGasto(value);
+                  setCategoryId("");
+                }}
+              >
+                <SelectTrigger id="tipo-gasto" className="h-11 bg-background">
+                  <SelectValue placeholder="Selecione o tipo..." />
+                </SelectTrigger>
+                <SelectContent className="bg-background border z-50">
+                  <SelectItem value="fixo">Gastos Fixos</SelectItem>
+                  <SelectItem value="variavel">Gastos Variáveis</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="categoria" className="flex items-center gap-2">
+                <Tag className="w-4 h-4" />
+                Categoria
+              </Label>
+              <Select 
+                value={categoryId} 
+                onValueChange={setCategoryId}
+                disabled={!tipoGasto}
+              >
+                <SelectTrigger id="categoria" className="h-11 bg-background">
+                  <SelectValue placeholder={tipoGasto ? "Selecione a categoria..." : "Selecione o tipo primeiro"} />
+                </SelectTrigger>
+                <SelectContent className="bg-background border z-50">
+                  {categoriasFiltradas.map((cat) => {
+                    const IconComponent = getIconComponent(cat.icon);
+                    return (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        <div className="flex items-center gap-2">
+                          <IconComponent className="w-4 h-4" style={{ color: cat.color }} />
+                          {cat.name}
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="valor" className="flex items-center gap-2">
+                <DollarSign className="w-4 h-4" />
+                Valor (R$)
+              </Label>
+              <Input
+                id="valor"
+                type="number"
+                step="0.01"
+                min="0"
+                value={valor}
+                onChange={(e) => setValor(e.target.value)}
+                placeholder="0,00"
+                className="h-11"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="data" className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Data
+              </Label>
+              <Input
+                id="data"
+                type="date"
+                value={data}
+                onChange={(e) => setData(e.target.value)}
+                className="h-11"
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="descricao" className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Descrição
+              </Label>
+              <Textarea
+                id="descricao"
+                value={descricao}
+                onChange={(e) => setDescricao(e.target.value)}
+                placeholder="Adicione detalhes sobre este gasto..."
+                className="min-h-[100px] resize-none"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3 pt-4">
+            <div className="flex gap-3">
+              <Button 
+                type="submit" 
+                className="flex-1 h-12 gradient-primary hover:shadow-glow transition-all"
+                disabled={loading}
+              >
+                <PlusCircle className="w-5 h-5 mr-2" />
+                {loading ? "Salvando..." : "Adicionar Gasto"}
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  setValor("");
+                  setTipoGasto("");
+                  setCategoryId("");
+                  setPersonId("");
+                  setDescricao("");
+                }}
+                className="h-12"
+              >
+                Limpar
+              </Button>
+            </div>
+            <div className="flex gap-4 justify-center">
+              <button
+                type="button"
+                onClick={onManageCategories}
+                className="text-sm text-primary hover:underline flex items-center gap-1"
+              >
+                <Settings className="w-3 h-3" />
+                Gerenciar Categorias
+              </button>
+              <button
+                type="button"
+                onClick={onManagePeople}
+                className="text-sm text-primary hover:underline flex items-center gap-1"
+              >
+                <User className="w-3 h-3" />
+                Gerenciar Pessoas
+              </button>
+            </div>
+          </div>
+        </form>
+      </Card>
+
+      <div className="max-w-2xl mx-auto">
+        <ExpenseImport />
       </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-        <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="pessoa" className="flex items-center gap-2">
-              <User className="w-4 h-4" />
-              Pessoa
-            </Label>
-            <Select value={personId} onValueChange={setPersonId}>
-              <SelectTrigger id="pessoa" className="h-11 bg-background">
-                <SelectValue placeholder="Quem fez o gasto?" />
-              </SelectTrigger>
-              <SelectContent className="bg-background border z-50">
-                {people.map((person) => (
-                  <SelectItem key={person.id} value={person.id}>
-                    {person.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tipo-gasto" className="flex items-center gap-2">
-              <Tag className="w-4 h-4" />
-              Tipo de Gasto
-            </Label>
-            <Select 
-              value={tipoGasto} 
-              onValueChange={(value) => {
-                setTipoGasto(value);
-                setCategoryId(""); // Limpar categoria ao mudar o tipo
-              }}
-            >
-              <SelectTrigger id="tipo-gasto" className="h-11 bg-background">
-                <SelectValue placeholder="Selecione o tipo..." />
-              </SelectTrigger>
-              <SelectContent className="bg-background border z-50">
-                <SelectItem value="fixo">Gastos Fixos</SelectItem>
-                <SelectItem value="variavel">Gastos Variáveis</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="categoria" className="flex items-center gap-2">
-              <Tag className="w-4 h-4" />
-              Categoria
-            </Label>
-            <Select 
-              value={categoryId} 
-              onValueChange={setCategoryId}
-              disabled={!tipoGasto}
-            >
-              <SelectTrigger id="categoria" className="h-11 bg-background">
-                <SelectValue placeholder={tipoGasto ? "Selecione a categoria..." : "Selecione o tipo primeiro"} />
-              </SelectTrigger>
-              <SelectContent className="bg-background border z-50">
-                {categoriasFiltradas.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="valor" className="flex items-center gap-2">
-              <DollarSign className="w-4 h-4" />
-              Valor (R$)
-            </Label>
-            <Input
-              id="valor"
-              type="number"
-              step="0.01"
-              min="0"
-              value={valor}
-              onChange={(e) => setValor(e.target.value)}
-              placeholder="0,00"
-              className="h-11"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="data" className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              Data
-            </Label>
-            <Input
-              id="data"
-              type="date"
-              value={data}
-              onChange={(e) => setData(e.target.value)}
-              className="h-11"
-            />
-          </div>
-
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="descricao" className="flex items-center gap-2">
-              <FileText className="w-4 h-4" />
-              Descrição
-            </Label>
-            <Textarea
-              id="descricao"
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
-              placeholder="Adicione detalhes sobre este gasto..."
-              className="min-h-[100px] resize-none"
-            />
-          </div>
-        </div>
-
-        <div className="space-y-3 pt-4">
-          <div className="flex gap-3">
-            <Button 
-              type="submit" 
-              className="flex-1 h-12 gradient-primary hover:shadow-glow transition-all"
-              disabled={loading}
-            >
-              <PlusCircle className="w-5 h-5 mr-2" />
-              {loading ? "Salvando..." : "Adicionar Gasto"}
-            </Button>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => {
-                setValor("");
-                setTipoGasto("");
-                setCategoryId("");
-                setPersonId("");
-                setDescricao("");
-              }}
-              className="h-12"
-            >
-              Limpar
-            </Button>
-          </div>
-          <div className="flex gap-4 justify-center">
-            <button
-              type="button"
-              onClick={onManageCategories}
-              className="text-sm text-primary hover:underline flex items-center gap-1"
-            >
-              <Settings className="w-3 h-3" />
-              Gerenciar Categorias
-            </button>
-            <button
-              type="button"
-              onClick={onManagePeople}
-              className="text-sm text-primary hover:underline flex items-center gap-1"
-            >
-              <User className="w-3 h-3" />
-              Gerenciar Pessoas
-            </button>
-          </div>
-        </div>
-      </form>
-    </Card>
+    </div>
   );
 };
 

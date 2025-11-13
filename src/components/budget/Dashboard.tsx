@@ -24,7 +24,7 @@ import Notifications from "./Notifications";
 import PersonManager from "./PersonManager";
 import SettingsComponent from "./Settings";
 import MonthYearSelector from "./MonthYearSelector";
-import ExpenseImport from "./ExpenseImport";
+
 import { supabase } from "@/integrations/supabase/client";
 
 interface DashboardProps {
@@ -317,9 +317,6 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
 
           <TabsContent value="charts" className="animate-fade-in">
             <ChartsSection />
-            <div className="mt-6">
-              <ExpenseImport />
-            </div>
           </TabsContent>
 
           <TabsContent value="notifications" className="animate-fade-in">

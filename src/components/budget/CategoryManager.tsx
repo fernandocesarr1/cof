@@ -12,6 +12,7 @@ import {
   Tag,
   ArrowLeft
 } from "lucide-react";
+import * as LucideIcons from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -34,12 +35,24 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
   const [newCategory, setNewCategory] = useState({
     nome: "",
     color: "#8B5CF6",
-    icon: "tag",
+    icon: "Tag",
     tipo: "variavel"
   });
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ nome: "", color: "", icon: "", tipo: "" });
+
+  const commonIcons = [
+    "Tag", "Home", "Car", "ShoppingCart", "Coffee", "Utensils", "Zap", "Wifi",
+    "Smartphone", "Tv", "Heart", "Book", "GraduationCap", "Plane", "Bus",
+    "Bike", "Fuel", "Lightbulb", "Droplets", "Trash2", "ShoppingBag", "Gift",
+    "Shirt", "Watch", "Pill", "Activity", "DollarSign", "CreditCard", "Wallet"
+  ];
+
+  const getIconComponent = (iconName: string) => {
+    const Icon = LucideIcons[iconName as keyof typeof LucideIcons] as any;
+    return Icon || LucideIcons.Tag;
+  };
 
   useEffect(() => {
     loadCategories();
@@ -102,7 +115,7 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
         title: "Categoria adicionada!",
         description: `${newCategory.nome} foi criada com sucesso.`,
       });
-      setNewCategory({ nome: "", color: "#8B5CF6", icon: "tag", tipo: "variavel" });
+      setNewCategory({ nome: "", color: "#8B5CF6", icon: "Tag", tipo: "variavel" });
       loadCategories();
     }
   };
@@ -213,7 +226,7 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
             <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
             Nova Categoria
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
             <Input
               placeholder="Nome da categoria"
               value={newCategory.nome}
@@ -230,6 +243,27 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
               <SelectContent className="bg-background border z-50">
                 <SelectItem value="fixo">Fixo</SelectItem>
                 <SelectItem value="variavel">Variável</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={newCategory.icon}
+              onValueChange={(value) => setNewCategory({ ...newCategory, icon: value })}
+            >
+              <SelectTrigger className="bg-background h-11">
+                <SelectValue placeholder="Ícone..." />
+              </SelectTrigger>
+              <SelectContent className="bg-background border z-50 max-h-[300px]">
+                {commonIcons.map((iconName) => {
+                  const IconComponent = getIconComponent(iconName);
+                  return (
+                    <SelectItem key={iconName} value={iconName}>
+                      <div className="flex items-center gap-2">
+                        <IconComponent className="w-4 h-4" />
+                        {iconName}
+                      </div>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
             <Input
@@ -296,6 +330,27 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
                                   <SelectItem value="variavel">Variável</SelectItem>
                                 </SelectContent>
                               </Select>
+                              <Select
+                                value={editForm.icon}
+                                onValueChange={(value) => setEditForm({ ...editForm, icon: value })}
+                              >
+                                <SelectTrigger className="h-8 w-[100px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-background border z-50 max-h-[200px]">
+                                  {commonIcons.map((iconName) => {
+                                    const IconComponent = getIconComponent(iconName);
+                                    return (
+                                      <SelectItem key={iconName} value={iconName}>
+                                        <div className="flex items-center gap-2">
+                                          <IconComponent className="w-3 h-3" />
+                                          {iconName}
+                                        </div>
+                                      </SelectItem>
+                                    );
+                                  })}
+                                </SelectContent>
+                              </Select>
                               <Input
                                 type="color"
                                 value={editForm.color}
@@ -315,10 +370,10 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
                         ) : (
                           <>
                             <div className="flex items-center gap-3 flex-1">
-                              <div 
-                                className="w-4 h-4 rounded-full" 
-                                style={{ backgroundColor: category.color }}
-                              />
+                              {(() => {
+                                const IconComponent = getIconComponent(category.icon);
+                                return <IconComponent className="w-4 h-4" style={{ color: category.color }} />;
+                              })()}
                               <span className="font-medium text-foreground">{category.name}</span>
                             </div>
                             <div className="flex gap-1">
@@ -382,6 +437,27 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
                                   <SelectItem value="variavel">Variável</SelectItem>
                                 </SelectContent>
                               </Select>
+                              <Select
+                                value={editForm.icon}
+                                onValueChange={(value) => setEditForm({ ...editForm, icon: value })}
+                              >
+                                <SelectTrigger className="h-8 w-[100px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-background border z-50 max-h-[200px]">
+                                  {commonIcons.map((iconName) => {
+                                    const IconComponent = getIconComponent(iconName);
+                                    return (
+                                      <SelectItem key={iconName} value={iconName}>
+                                        <div className="flex items-center gap-2">
+                                          <IconComponent className="w-3 h-3" />
+                                          {iconName}
+                                        </div>
+                                      </SelectItem>
+                                    );
+                                  })}
+                                </SelectContent>
+                              </Select>
                               <Input
                                 type="color"
                                 value={editForm.color}
@@ -401,10 +477,10 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
                         ) : (
                           <>
                             <div className="flex items-center gap-3 flex-1">
-                              <div 
-                                className="w-4 h-4 rounded-full" 
-                                style={{ backgroundColor: category.color }}
-                              />
+                              {(() => {
+                                const IconComponent = getIconComponent(category.icon);
+                                return <IconComponent className="w-4 h-4" style={{ color: category.color }} />;
+                              })()}
                               <span className="font-medium text-foreground">{category.name}</span>
                             </div>
                             <div className="flex gap-1">

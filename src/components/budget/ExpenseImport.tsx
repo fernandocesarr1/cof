@@ -161,14 +161,48 @@ const ExpenseImport = () => {
           </div>
         )}
 
-        <div className="bg-muted/50 p-4 rounded-lg text-xs sm:text-sm space-y-2">
+        <div className="bg-muted/50 p-4 rounded-lg text-xs sm:text-sm space-y-3">
           <p className="font-semibold">Instruções:</p>
           <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-            <li>Colunas: data, descricao, valor, categoria, pessoa</li>
+            <li>Colunas obrigatórias: data, descricao, valor</li>
+            <li>Colunas opcionais: categoria, pessoa</li>
             <li>Data: DD/MM/YYYY ou YYYY-MM-DD</li>
             <li>Valor: use ponto ou vírgula como decimal</li>
             <li>Categoria e pessoa devem existir no sistema</li>
           </ul>
+          
+          <div className="mt-3">
+            <p className="font-semibold mb-2">Exemplo de formato:</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs border border-border rounded">
+                <thead className="bg-muted">
+                  <tr>
+                    <th className="border border-border px-2 py-1">data</th>
+                    <th className="border border-border px-2 py-1">descricao</th>
+                    <th className="border border-border px-2 py-1">valor</th>
+                    <th className="border border-border px-2 py-1">categoria</th>
+                    <th className="border border-border px-2 py-1">pessoa</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-background">
+                  <tr>
+                    <td className="border border-border px-2 py-1">01/11/2024</td>
+                    <td className="border border-border px-2 py-1">Supermercado</td>
+                    <td className="border border-border px-2 py-1">150.50</td>
+                    <td className="border border-border px-2 py-1">Alimentação</td>
+                    <td className="border border-border px-2 py-1">João</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-border px-2 py-1">2024-11-02</td>
+                    <td className="border border-border px-2 py-1">Gasolina</td>
+                    <td className="border border-border px-2 py-1">200,00</td>
+                    <td className="border border-border px-2 py-1">Transporte</td>
+                    <td className="border border-border px-2 py-1">Maria</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     </Card>

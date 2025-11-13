@@ -15,6 +15,7 @@ import {
   Tag,
   FileText
 } from "lucide-react";
+import * as LucideIcons from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-logger";
 import ExpenseEditDialog from "./ExpenseEditDialog";
@@ -35,6 +36,11 @@ const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
     loadExpenses();
   }, [refreshTrigger]);
 
+  const getIconComponent = (iconName: string) => {
+    const Icon = LucideIcons[iconName as keyof typeof LucideIcons] as any;
+    return Icon || LucideIcons.Tag;
+  };
+
   const loadExpenses = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -45,6 +51,7 @@ const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
           id,
           name,
           color,
+          icon,
           tipo
         ),
         people (
@@ -158,6 +165,15 @@ const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
                 <div className="flex items-center gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
+                      {expense.categories && (() => {
+                        const IconComponent = getIconComponent(expense.categories.icon);
+                        return (
+                          <IconComponent 
+                            className="w-4 h-4 flex-shrink-0" 
+                            style={{ color: expense.categories.color }}
+                          />
+                        );
+                      })()}
                       <span className="font-semibold text-sm text-foreground truncate">
                         {expense.categories?.name || "Sem categoria"}
                       </span>

@@ -38,7 +38,7 @@ const ChartsSection = () => {
   const loadChartData = async () => {
     setLoading(true);
     
-    // Carregar categorias
+    // Carregar categorias com ícones
     const { data: categoriesData } = await supabase
       .from('categories')
       .select('*')
@@ -111,7 +111,7 @@ const ChartsSection = () => {
       .from('expenses')
       .select(`
         amount,
-        categories (name, color),
+        categories (name, color, icon),
         people (id, name)
       `)
       .gte('date', firstDay.toISOString().split('T')[0])
