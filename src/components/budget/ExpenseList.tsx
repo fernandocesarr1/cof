@@ -60,8 +60,8 @@ const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
           color
         )
       `)
-      .order('date', { ascending: true })
-      .order('created_at', { ascending: true });
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false });
 
     setLoading(false);
 
@@ -168,10 +168,12 @@ const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
                       {expense.categories && (() => {
                         const IconComponent = getIconComponent(expense.categories.icon);
                         return (
-                          <IconComponent 
-                            className="w-4 h-4 flex-shrink-0" 
-                            style={{ color: expense.categories.color }}
-                          />
+                          <div 
+                            className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                            style={{ backgroundColor: expense.categories.color }}
+                          >
+                            <IconComponent className="w-3.5 h-3.5 text-white" />
+                          </div>
                         );
                       })()}
                       <span className="font-semibold text-sm text-foreground truncate">

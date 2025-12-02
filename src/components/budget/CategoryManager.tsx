@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-logger";
+import SubcategoryManager from "./SubcategoryManager";
 
 interface CategoryManagerProps {
   onBack: () => void;
@@ -42,12 +43,47 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ nome: "", color: "", icon: "", tipo: "" });
 
-  const commonIcons = [
-    "Tag", "Home", "Car", "ShoppingCart", "Coffee", "Utensils", "Zap", "Wifi",
-    "Smartphone", "Tv", "Heart", "Book", "GraduationCap", "Plane", "Bus",
-    "Bike", "Fuel", "Lightbulb", "Droplets", "Trash2", "ShoppingBag", "Gift",
-    "Shirt", "Watch", "Pill", "Activity", "DollarSign", "CreditCard", "Wallet"
+  // WhatsApp-style colorful category icons
+  const categoryIconsWithColors: { icon: string; color: string; label: string }[] = [
+    { icon: "Home", color: "#10B981", label: "Casa" },
+    { icon: "Car", color: "#3B82F6", label: "Carro" },
+    { icon: "ShoppingCart", color: "#F59E0B", label: "Compras" },
+    { icon: "Coffee", color: "#8B4513", label: "Café" },
+    { icon: "Utensils", color: "#EF4444", label: "Alimentação" },
+    { icon: "Zap", color: "#FBBF24", label: "Energia" },
+    { icon: "Wifi", color: "#6366F1", label: "Internet" },
+    { icon: "Smartphone", color: "#8B5CF6", label: "Telefone" },
+    { icon: "Tv", color: "#EC4899", label: "Entretenimento" },
+    { icon: "Heart", color: "#EF4444", label: "Saúde" },
+    { icon: "Book", color: "#14B8A6", label: "Educação" },
+    { icon: "GraduationCap", color: "#0EA5E9", label: "Estudos" },
+    { icon: "Plane", color: "#06B6D4", label: "Viagem" },
+    { icon: "Bus", color: "#84CC16", label: "Transporte" },
+    { icon: "Bike", color: "#22C55E", label: "Bicicleta" },
+    { icon: "Fuel", color: "#F97316", label: "Combustível" },
+    { icon: "Lightbulb", color: "#EAB308", label: "Luz" },
+    { icon: "Droplets", color: "#0EA5E9", label: "Água" },
+    { icon: "ShoppingBag", color: "#D946EF", label: "Shopping" },
+    { icon: "Gift", color: "#F43F5E", label: "Presentes" },
+    { icon: "Shirt", color: "#A855F7", label: "Roupas" },
+    { icon: "Pill", color: "#10B981", label: "Remédios" },
+    { icon: "Activity", color: "#EF4444", label: "Academia" },
+    { icon: "DollarSign", color: "#22C55E", label: "Dinheiro" },
+    { icon: "CreditCard", color: "#6366F1", label: "Cartão" },
+    { icon: "Wallet", color: "#8B5CF6", label: "Carteira" },
+    { icon: "Music", color: "#EC4899", label: "Música" },
+    { icon: "Gamepad2", color: "#7C3AED", label: "Jogos" },
+    { icon: "Dog", color: "#F59E0B", label: "Pet" },
+    { icon: "Baby", color: "#FB7185", label: "Bebê" },
+    { icon: "Scissors", color: "#14B8A6", label: "Beleza" },
+    { icon: "Wrench", color: "#64748B", label: "Manutenção" },
+    { icon: "Building", color: "#6B7280", label: "Aluguel" },
+    { icon: "Receipt", color: "#78716C", label: "Contas" },
+    { icon: "Banknote", color: "#16A34A", label: "Pagamentos" },
+    { icon: "PiggyBank", color: "#F472B6", label: "Poupança" },
   ];
+
+  const commonIcons = categoryIconsWithColors.map(c => c.icon);
 
   const getIconComponent = (iconName: string) => {
     const Icon = LucideIcons[iconName as keyof typeof LucideIcons] as any;
@@ -247,19 +283,31 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
             </Select>
             <Select
               value={newCategory.icon}
-              onValueChange={(value) => setNewCategory({ ...newCategory, icon: value })}
+              onValueChange={(value) => {
+                const iconInfo = categoryIconsWithColors.find(c => c.icon === value);
+                setNewCategory({ 
+                  ...newCategory, 
+                  icon: value,
+                  color: iconInfo?.color || newCategory.color
+                });
+              }}
             >
               <SelectTrigger className="bg-background h-11">
                 <SelectValue placeholder="Ícone..." />
               </SelectTrigger>
               <SelectContent className="bg-background border z-50 max-h-[300px]">
-                {commonIcons.map((iconName) => {
-                  const IconComponent = getIconComponent(iconName);
+                {categoryIconsWithColors.map((item) => {
+                  const IconComponent = getIconComponent(item.icon);
                   return (
-                    <SelectItem key={iconName} value={iconName}>
+                    <SelectItem key={item.icon} value={item.icon}>
                       <div className="flex items-center gap-2">
-                        <IconComponent className="w-4 h-4" />
-                        {iconName}
+                        <div 
+                          className="w-6 h-6 rounded-full flex items-center justify-center"
+                          style={{ backgroundColor: item.color }}
+                        >
+                          <IconComponent className="w-3.5 h-3.5 text-white" />
+                        </div>
+                        <span className="text-sm">{item.label}</span>
                       </div>
                     </SelectItem>
                   );
@@ -332,19 +380,31 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
                               </Select>
                               <Select
                                 value={editForm.icon}
-                                onValueChange={(value) => setEditForm({ ...editForm, icon: value })}
+                                onValueChange={(value) => {
+                                  const iconInfo = categoryIconsWithColors.find(c => c.icon === value);
+                                  setEditForm({ 
+                                    ...editForm, 
+                                    icon: value,
+                                    color: iconInfo?.color || editForm.color
+                                  });
+                                }}
                               >
-                                <SelectTrigger className="h-8 w-[100px]">
+                                <SelectTrigger className="h-8 w-[120px]">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent className="bg-background border z-50 max-h-[200px]">
-                                  {commonIcons.map((iconName) => {
-                                    const IconComponent = getIconComponent(iconName);
+                                  {categoryIconsWithColors.map((item) => {
+                                    const IconComponent = getIconComponent(item.icon);
                                     return (
-                                      <SelectItem key={iconName} value={iconName}>
+                                      <SelectItem key={item.icon} value={item.icon}>
                                         <div className="flex items-center gap-2">
-                                          <IconComponent className="w-3 h-3" />
-                                          {iconName}
+                                          <div 
+                                            className="w-5 h-5 rounded-full flex items-center justify-center"
+                                            style={{ backgroundColor: item.color }}
+                                          >
+                                            <IconComponent className="w-3 h-3 text-white" />
+                                          </div>
+                                          <span className="text-xs">{item.label}</span>
                                         </div>
                                       </SelectItem>
                                     );
@@ -372,7 +432,14 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
                             <div className="flex items-center gap-3 flex-1">
                               {(() => {
                                 const IconComponent = getIconComponent(category.icon);
-                                return <IconComponent className="w-4 h-4" style={{ color: category.color }} />;
+                                return (
+                                  <div 
+                                    className="w-8 h-8 rounded-full flex items-center justify-center shadow-sm"
+                                    style={{ backgroundColor: category.color }}
+                                  >
+                                    <IconComponent className="w-4 h-4 text-white" />
+                                  </div>
+                                );
                               })()}
                               <span className="font-medium text-foreground">{category.name}</span>
                             </div>
@@ -439,19 +506,31 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
                               </Select>
                               <Select
                                 value={editForm.icon}
-                                onValueChange={(value) => setEditForm({ ...editForm, icon: value })}
+                                onValueChange={(value) => {
+                                  const iconInfo = categoryIconsWithColors.find(c => c.icon === value);
+                                  setEditForm({ 
+                                    ...editForm, 
+                                    icon: value,
+                                    color: iconInfo?.color || editForm.color
+                                  });
+                                }}
                               >
-                                <SelectTrigger className="h-8 w-[100px]">
+                                <SelectTrigger className="h-8 w-[120px]">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent className="bg-background border z-50 max-h-[200px]">
-                                  {commonIcons.map((iconName) => {
-                                    const IconComponent = getIconComponent(iconName);
+                                  {categoryIconsWithColors.map((item) => {
+                                    const IconComponent = getIconComponent(item.icon);
                                     return (
-                                      <SelectItem key={iconName} value={iconName}>
+                                      <SelectItem key={item.icon} value={item.icon}>
                                         <div className="flex items-center gap-2">
-                                          <IconComponent className="w-3 h-3" />
-                                          {iconName}
+                                          <div 
+                                            className="w-5 h-5 rounded-full flex items-center justify-center"
+                                            style={{ backgroundColor: item.color }}
+                                          >
+                                            <IconComponent className="w-3 h-3 text-white" />
+                                          </div>
+                                          <span className="text-xs">{item.label}</span>
                                         </div>
                                       </SelectItem>
                                     );
@@ -479,7 +558,14 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
                             <div className="flex items-center gap-3 flex-1">
                               {(() => {
                                 const IconComponent = getIconComponent(category.icon);
-                                return <IconComponent className="w-4 h-4" style={{ color: category.color }} />;
+                                return (
+                                  <div 
+                                    className="w-8 h-8 rounded-full flex items-center justify-center shadow-sm"
+                                    style={{ backgroundColor: category.color }}
+                                  >
+                                    <IconComponent className="w-4 h-4 text-white" />
+                                  </div>
+                                );
                               })()}
                               <span className="font-medium text-foreground">{category.name}</span>
                             </div>
@@ -513,6 +599,11 @@ const CategoryManager = ({ onBack }: CategoryManagerProps) => {
               </div>
             )}
           </div>
+        )}
+
+        {/* Subcategory Manager */}
+        {categories.length > 0 && (
+          <SubcategoryManager categories={categories} onUpdate={loadCategories} />
         )}
       </Card>
     </div>

@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
-import { TrendingUp, PieChart as PieChartIcon } from "lucide-react";
+import { TrendingUp, PieChart as PieChartIcon, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import MonthYearSelector from "./MonthYearSelector";
 
 const ChartsSection = () => {
@@ -123,17 +123,22 @@ const ChartsSection = () => {
     
     const { data: expenses } = await query;
     
-    // Agrupar por categoria
-    const categoryMap = new Map();
+    // Agrupar por categoria com cor
+    const categoryMap = new Map<string, { value: number; color: string }>();
     expenses?.forEach(e => {
       const catName = e.categories?.name || 'Sem categoria';
-      const current = categoryMap.get(catName) || 0;
-      categoryMap.set(catName, current + parseFloat(String(e.amount || 0)));
+      const catColor = e.categories?.color || '#8B5CF6';
+      const current = categoryMap.get(catName) || { value: 0, color: catColor };
+      categoryMap.set(catName, { 
+        value: current.value + parseFloat(String(e.amount || 0)), 
+        color: catColor 
+      });
     });
     
-    const catData = Array.from(categoryMap.entries()).map(([name, value]) => ({
+    const catData = Array.from(categoryMap.entries()).map(([name, data]) => ({
       name,
-      value
+      value: data.value,
+      color: data.color
     }));
     setCategoryData(catData);
   };
@@ -237,8 +242,9 @@ const ChartsSection = () => {
               type="monotone" 
               dataKey="total" 
               stroke="hsl(var(--primary))" 
-              strokeWidth={2}
+              strokeWidth={3}
               name="Total"
+              dot={{ r: 4 }}
             />
             {peopleMonthlyData.map((person, index) => (
               <Line 
@@ -246,9 +252,10 @@ const ChartsSection = () => {
                 type="monotone" 
                 dataKey={person.name} 
                 stroke={person.color || COLORS[index % COLORS.length]}
-                strokeWidth={2}
-                strokeDasharray="5 5"
+                strokeWidth={3}
+                strokeDasharray="8 4"
                 name={person.name}
+                dot={{ r: 3 }}
               />
             ))}
           </LineChart>
@@ -294,37 +301,81 @@ const ChartsSection = () => {
             <p className="text-muted-foreground text-sm">Nenhum gasto no período selecionado</p>
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={window.innerWidth < 640 ? 250 : 300}>
-            <PieChart>
-              <Pie
-                data={categoryData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => 
-                  window.innerWidth < 640 
-                    ? `${(percent * 100).toFixed(0)}%` 
-                    : `${name}: ${(percent * 100).toFixed(0)}%`
-                }
-                outerRadius={window.innerWidth < 640 ? 60 : 80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {categoryData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: 'hsl(var(--card))', 
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '8px',
-                  fontSize: window.innerWidth < 640 ? '12px' : '14px'
-                }}
-                formatter={(value: any) => `R$ ${parseFloat(value).toFixed(2)}`}
-              />
-            </PieChart>
-          </ResponsiveContainer>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Pie Chart */}
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+                <PieChartIcon className="w-4 h-4" />
+                Gráfico de Pizza
+              </h3>
+              <ResponsiveContainer width="100%" height={window.innerWidth < 640 ? 200 : 250}>
+                <PieChart>
+                  <Pie
+                    data={categoryData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => 
+                      window.innerWidth < 640 
+                        ? `${(percent * 100).toFixed(0)}%` 
+                        : `${name}: ${(percent * 100).toFixed(0)}%`
+                    }
+                    outerRadius={window.innerWidth < 640 ? 50 : 70}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {categoryData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))', 
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                      fontSize: '12px'
+                    }}
+                    formatter={(value: any) => `R$ ${parseFloat(value).toFixed(2)}`}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Bar Chart */}
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" />
+                Gráfico de Barras
+              </h3>
+              <ResponsiveContainer width="100%" height={window.innerWidth < 640 ? 200 : 250}>
+                <BarChart data={categoryData} layout="vertical" margin={{ left: 60 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
+                  <XAxis type="number" stroke="hsl(var(--muted-foreground))" style={{ fontSize: '10px' }} />
+                  <YAxis 
+                    dataKey="name" 
+                    type="category" 
+                    stroke="hsl(var(--muted-foreground))" 
+                    style={{ fontSize: '10px' }}
+                    width={55}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))', 
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                      fontSize: '12px'
+                    }}
+                    formatter={(value: any) => `R$ ${parseFloat(value).toFixed(2)}`}
+                  />
+                  <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                    {categoryData.map((entry, index) => (
+                      <Cell key={`cell-bar-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         )}
       </Card>
 

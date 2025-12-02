@@ -214,7 +214,12 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
                     return (
                       <SelectItem key={cat.id} value={cat.id}>
                         <div className="flex items-center gap-2">
-                          <IconComponent className="w-4 h-4" style={{ color: cat.color }} />
+                          <div 
+                            className="w-6 h-6 rounded-full flex items-center justify-center"
+                            style={{ backgroundColor: cat.color }}
+                          >
+                            <IconComponent className="w-3.5 h-3.5 text-white" />
+                          </div>
                           {cat.name}
                         </div>
                       </SelectItem>
