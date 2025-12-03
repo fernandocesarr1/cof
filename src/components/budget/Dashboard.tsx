@@ -96,11 +96,6 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
       setTotalMes(total);
       setGastosFixos(fixos);
       setGastosVariaveis(variaveis);
-    } else {
-      setTotalMes(0);
-      setGastosFixos(0);
-      setGastosVariaveis(0);
-      setPeopleData([]);
       
       // Calcular gastos por pessoa no mês
       const peopleMap = new Map();
@@ -112,6 +107,11 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
         }
       });
       setPeopleData(Array.from(peopleMap.values()));
+    } else {
+      setTotalMes(0);
+      setGastosFixos(0);
+      setGastosVariaveis(0);
+      setPeopleData([]);
     }
 
     // Dados do ano
@@ -130,10 +130,6 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
     if (expensesYear && expensesYear.length > 0) {
       const totalYear = expensesYear.reduce((sum, e) => sum + parseFloat(String(e.amount || 0)), 0);
       setTotalAno(totalYear);
-    } else {
-      setTotalAno(0);
-      setPeopleDataYear([]);
-      return;
       
       // Calcular gastos por pessoa no ano
       const peopleMapYear = new Map();
@@ -145,6 +141,9 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
         }
       });
       setPeopleDataYear(Array.from(peopleMapYear.values()));
+    } else {
+      setTotalAno(0);
+      setPeopleDataYear([]);
     }
   };
 
