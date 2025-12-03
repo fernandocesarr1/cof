@@ -252,8 +252,7 @@ const ChartsSection = () => {
                 type="monotone" 
                 dataKey={person.name} 
                 stroke={person.color || COLORS[index % COLORS.length]}
-                strokeWidth={3}
-                strokeDasharray="8 4"
+                strokeWidth={2}
                 name={person.name}
                 dot={{ r: 3 }}
               />

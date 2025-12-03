@@ -84,7 +84,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
       .gte('date', firstDay.toISOString().split('T')[0])
       .lte('date', lastDay.toISOString().split('T')[0]);
     
-    if (expenses) {
+    if (expenses && expenses.length > 0) {
       const total = expenses.reduce((sum, e) => sum + parseFloat(String(e.amount || 0)), 0);
       const fixos = expenses
         .filter(e => e.categories?.tipo === 'fixo')
@@ -96,6 +96,11 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
       setTotalMes(total);
       setGastosFixos(fixos);
       setGastosVariaveis(variaveis);
+    } else {
+      setTotalMes(0);
+      setGastosFixos(0);
+      setGastosVariaveis(0);
+      setPeopleData([]);
       
       // Calcular gastos por pessoa no mês
       const peopleMap = new Map();
@@ -122,9 +127,13 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
       .gte('date', firstDayYear.toISOString().split('T')[0])
       .lte('date', lastDayYear.toISOString().split('T')[0]);
     
-    if (expensesYear) {
+    if (expensesYear && expensesYear.length > 0) {
       const totalYear = expensesYear.reduce((sum, e) => sum + parseFloat(String(e.amount || 0)), 0);
       setTotalAno(totalYear);
+    } else {
+      setTotalAno(0);
+      setPeopleDataYear([]);
+      return;
       
       // Calcular gastos por pessoa no ano
       const peopleMapYear = new Map();
