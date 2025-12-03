@@ -21,9 +21,11 @@ interface ExpenseFormProps {
 const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: ExpenseFormProps) => {
   const { toast } = useToast();
   const [categories, setCategories] = useState<any[]>([]);
+  const [subcategories, setSubcategories] = useState<any[]>([]);
   const [people, setPeople] = useState<any[]>([]);
   const [tipoGasto, setTipoGasto] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [subcategoryId, setSubcategoryId] = useState("");
   const [personId, setPersonId] = useState("");
   const [valor, setValor] = useState("");
   const [data, setData] = useState(new Date().toISOString().split('T')[0]);
@@ -34,10 +36,16 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
   const categoriasFiltradas = tipoGasto 
     ? categories.filter(cat => cat.tipo === tipoGasto)
     : [];
+  
+  // Filtrar subcategorias baseado na categoria selecionada
+  const subcategoriasFiltradas = categoryId
+    ? subcategories.filter(sub => sub.category_id === categoryId)
+    : [];
 
   useEffect(() => {
     loadCategories();
     loadPeople();
+    loadSubcategories();
   }, []);
 
   const loadCategories = async () => {
@@ -54,6 +62,17 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
       });
     } else {
       setCategories(data || []);
+    }
+  };
+
+  const loadSubcategories = async () => {
+    const { data, error } = await supabase
+      .from('subcategories')
+      .select('*')
+      .order('name');
+    
+    if (!error) {
+      setSubcategories(data || []);
     }
   };
 
@@ -93,6 +112,7 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
         description: descricao,
         amount: parseFloat(valor),
         category_id: categoryId,
+        subcategory_id: subcategoryId || null,
         person_id: personId,
         date: data
       });
@@ -121,6 +141,7 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
       setValor("");
       setTipoGasto("");
       setCategoryId("");
+      setSubcategoryId("");
       setPersonId("");
       setDescricao("");
       
@@ -202,7 +223,10 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
               </Label>
               <Select 
                 value={categoryId} 
-                onValueChange={setCategoryId}
+                onValueChange={(value) => {
+                  setCategoryId(value);
+                  setSubcategoryId("");
+                }}
                 disabled={!tipoGasto}
               >
                 <SelectTrigger id="categoria" className="h-11 bg-background">
@@ -228,6 +252,31 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
                 </SelectContent>
               </Select>
             </div>
+
+            {subcategoriasFiltradas.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="subcategoria" className="flex items-center gap-2">
+                  <Tag className="w-4 h-4" />
+                  Subcategoria (opcional)
+                </Label>
+                <Select 
+                  value={subcategoryId} 
+                  onValueChange={setSubcategoryId}
+                >
+                  <SelectTrigger id="subcategoria" className="h-11 bg-background">
+                    <SelectValue placeholder="Selecione a subcategoria..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border z-50">
+                    <SelectItem value="">Nenhuma</SelectItem>
+                    {subcategoriasFiltradas.map((sub) => (
+                      <SelectItem key={sub.id} value={sub.id}>
+                        {sub.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="valor" className="flex items-center gap-2">
@@ -292,6 +341,7 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
                   setValor("");
                   setTipoGasto("");
                   setCategoryId("");
+                  setSubcategoryId("");
                   setPersonId("");
                   setDescricao("");
                 }}
