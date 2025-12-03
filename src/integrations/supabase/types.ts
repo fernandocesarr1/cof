@@ -123,6 +123,7 @@ export type Database = {
           description: string
           id: string
           person_id: string | null
+          subcategory_id: string | null
         }
         Insert: {
           amount: number
@@ -132,6 +133,7 @@ export type Database = {
           description: string
           id?: string
           person_id?: string | null
+          subcategory_id?: string | null
         }
         Update: {
           amount?: number
@@ -141,6 +143,7 @@ export type Database = {
           description?: string
           id?: string
           person_id?: string | null
+          subcategory_id?: string | null
         }
         Relationships: [
           {
@@ -155,6 +158,13 @@ export type Database = {
             columns: ["person_id"]
             isOneToOne: false
             referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
             referencedColumns: ["id"]
           },
         ]
@@ -182,6 +192,41 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      subcategories: {
+        Row: {
+          category_id: string
+          color: string | null
+          created_at: string
+          icon: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          category_id: string
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          category_id?: string
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subcategories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
