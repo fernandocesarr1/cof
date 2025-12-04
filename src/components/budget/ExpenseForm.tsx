@@ -15,10 +15,11 @@ import * as LucideIcons from "lucide-react";
 interface ExpenseFormProps {
   onManageCategories: () => void;
   onManagePeople: () => void;
+  onManageSubcategories: () => void;
   onExpenseAdded?: () => void;
 }
 
-const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: ExpenseFormProps) => {
+const ExpenseForm = ({ onManageCategories, onManagePeople, onManageSubcategories, onExpenseAdded }: ExpenseFormProps) => {
   const { toast } = useToast();
   const [categories, setCategories] = useState<any[]>([]);
   const [subcategories, setSubcategories] = useState<any[]>([]);
@@ -253,30 +254,29 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
               </Select>
             </div>
 
-            {categoryId && (
-              <div className="space-y-2">
-                <Label htmlFor="subcategoria" className="flex items-center gap-2">
-                  <Tag className="w-4 h-4" />
-                  Subcategoria (opcional)
-                </Label>
-                <Select 
-                  value={subcategoryId || "none"} 
-                  onValueChange={(value) => setSubcategoryId(value === "none" ? "" : value)}
-                >
-                  <SelectTrigger id="subcategoria" className="h-11 bg-background">
-                    <SelectValue placeholder="Selecione a subcategoria..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background border z-50">
-                    <SelectItem value="none">Nenhuma</SelectItem>
-                    {subcategoriasFiltradas.map((sub) => (
-                      <SelectItem key={sub.id} value={sub.id}>
-                        {sub.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="subcategoria" className="flex items-center gap-2">
+                <Tag className="w-4 h-4" />
+                Subcategoria (opcional)
+              </Label>
+              <Select 
+                value={subcategoryId || "none"} 
+                onValueChange={(value) => setSubcategoryId(value === "none" ? "" : value)}
+                disabled={!categoryId}
+              >
+                <SelectTrigger id="subcategoria" className="h-11 bg-background">
+                  <SelectValue placeholder={categoryId ? "Selecione a subcategoria..." : "Selecione a categoria primeiro"} />
+                </SelectTrigger>
+                <SelectContent className="bg-background border z-50">
+                  <SelectItem value="none">Nenhuma</SelectItem>
+                  {subcategoriasFiltradas.map((sub) => (
+                    <SelectItem key={sub.id} value={sub.id}>
+                      {sub.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="valor" className="flex items-center gap-2">
@@ -350,7 +350,7 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
                 Limpar
               </Button>
             </div>
-            <div className="flex gap-4 justify-center">
+            <div className="flex gap-4 justify-center flex-wrap">
               <button
                 type="button"
                 onClick={onManageCategories}
@@ -358,6 +358,14 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
               >
                 <Settings className="w-3 h-3" />
                 Gerenciar Categorias
+              </button>
+              <button
+                type="button"
+                onClick={onManageSubcategories}
+                className="text-sm text-primary hover:underline flex items-center gap-1"
+              >
+                <Tag className="w-3 h-3" />
+                Gerenciar Subcategorias
               </button>
               <button
                 type="button"
