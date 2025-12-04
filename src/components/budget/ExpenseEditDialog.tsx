@@ -19,9 +19,11 @@ interface ExpenseEditDialogProps {
 const ExpenseEditDialog = ({ expense, open, onOpenChange, onExpenseUpdated }: ExpenseEditDialogProps) => {
   const { toast } = useToast();
   const [categories, setCategories] = useState<any[]>([]);
+  const [subcategories, setSubcategories] = useState<any[]>([]);
   const [people, setPeople] = useState<any[]>([]);
   const [tipoGasto, setTipoGasto] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [subcategoryId, setSubcategoryId] = useState("");
   const [personId, setPersonId] = useState("");
   const [valor, setValor] = useState("");
   const [data, setData] = useState("");
@@ -30,6 +32,7 @@ const ExpenseEditDialog = ({ expense, open, onOpenChange, onExpenseUpdated }: Ex
 
   useEffect(() => {
     loadCategories();
+    loadSubcategories();
     loadPeople();
   }, []);
 
@@ -39,6 +42,7 @@ const ExpenseEditDialog = ({ expense, open, onOpenChange, onExpenseUpdated }: Ex
       setData(expense.date || "");
       setDescricao(expense.description || "");
       setCategoryId(expense.category_id || "");
+      setSubcategoryId(expense.subcategory_id || "");
       setPersonId(expense.person_id || "");
       setTipoGasto(expense.categories?.tipo || "");
     }
@@ -52,6 +56,14 @@ const ExpenseEditDialog = ({ expense, open, onOpenChange, onExpenseUpdated }: Ex
     setCategories(data || []);
   };
 
+  const loadSubcategories = async () => {
+    const { data } = await supabase
+      .from('subcategories')
+      .select('*')
+      .order('name');
+    setSubcategories(data || []);
+  };
+
   const loadPeople = async () => {
     const { data } = await supabase
       .from('people')
@@ -62,6 +74,10 @@ const ExpenseEditDialog = ({ expense, open, onOpenChange, onExpenseUpdated }: Ex
 
   const categoriasFiltradas = tipoGasto 
     ? categories.filter(cat => cat.tipo === tipoGasto)
+    : [];
+
+  const subcategoriasFiltradas = categoryId
+    ? subcategories.filter(sub => sub.category_id === categoryId)
     : [];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -83,6 +99,7 @@ const ExpenseEditDialog = ({ expense, open, onOpenChange, onExpenseUpdated }: Ex
         description: descricao,
         amount: parseFloat(valor),
         category_id: categoryId,
+        subcategory_id: subcategoryId || null,
         person_id: personId,
         date: data
       })
@@ -133,6 +150,7 @@ const ExpenseEditDialog = ({ expense, open, onOpenChange, onExpenseUpdated }: Ex
                 onValueChange={(value) => {
                   setTipoGasto(value);
                   setCategoryId("");
+                  setSubcategoryId("");
                 }}
               >
                 <SelectTrigger id="edit-tipo">
@@ -149,7 +167,10 @@ const ExpenseEditDialog = ({ expense, open, onOpenChange, onExpenseUpdated }: Ex
               <Label htmlFor="edit-categoria">Categoria</Label>
               <Select 
                 value={categoryId} 
-                onValueChange={setCategoryId}
+                onValueChange={(value) => {
+                  setCategoryId(value);
+                  setSubcategoryId("");
+                }}
                 disabled={!tipoGasto}
               >
                 <SelectTrigger id="edit-categoria">
@@ -164,6 +185,28 @@ const ExpenseEditDialog = ({ expense, open, onOpenChange, onExpenseUpdated }: Ex
                 </SelectContent>
               </Select>
             </div>
+
+            {categoryId && (
+              <div className="space-y-2">
+                <Label htmlFor="edit-subcategoria">Subcategoria (opcional)</Label>
+                <Select 
+                  value={subcategoryId || "none"} 
+                  onValueChange={(value) => setSubcategoryId(value === "none" ? "" : value)}
+                >
+                  <SelectTrigger id="edit-subcategoria">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border z-50">
+                    <SelectItem value="none">Nenhuma</SelectItem>
+                    {subcategoriasFiltradas.map((sub) => (
+                      <SelectItem key={sub.id} value={sub.id}>
+                        {sub.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="edit-pessoa">Pessoa</Label>
