@@ -253,21 +253,21 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
               </Select>
             </div>
 
-            {subcategoriasFiltradas.length > 0 && (
+            {categoryId && (
               <div className="space-y-2">
                 <Label htmlFor="subcategoria" className="flex items-center gap-2">
                   <Tag className="w-4 h-4" />
                   Subcategoria (opcional)
                 </Label>
                 <Select 
-                  value={subcategoryId} 
-                  onValueChange={setSubcategoryId}
+                  value={subcategoryId || "none"} 
+                  onValueChange={(value) => setSubcategoryId(value === "none" ? "" : value)}
                 >
                   <SelectTrigger id="subcategoria" className="h-11 bg-background">
                     <SelectValue placeholder="Selecione a subcategoria..." />
                   </SelectTrigger>
                   <SelectContent className="bg-background border z-50">
-                    <SelectItem value="">Nenhuma</SelectItem>
+                    <SelectItem value="none">Nenhuma</SelectItem>
                     {subcategoriasFiltradas.map((sub) => (
                       <SelectItem key={sub.id} value={sub.id}>
                         {sub.name}

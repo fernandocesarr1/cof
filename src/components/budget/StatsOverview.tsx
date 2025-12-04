@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Edit, Check, X } from "lucide-react";
+import { Edit, Check, X, ChevronDown, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface StatsOverviewProps {
   refreshTrigger?: number;
@@ -15,11 +14,13 @@ interface StatsOverviewProps {
 
 const StatsOverview = ({ refreshTrigger, selectedMonth, selectedYear }: StatsOverviewProps) => {
   const [categories, setCategories] = useState<any[]>([]);
+  const [subcategories, setSubcategories] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
   const [budgets, setBudgets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingBudget, setEditingBudget] = useState<string | null>(null);
   const [budgetValue, setBudgetValue] = useState("");
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadData();
@@ -30,6 +31,11 @@ const StatsOverview = ({ refreshTrigger, selectedMonth, selectedYear }: StatsOve
     
     const { data: categoriesData } = await supabase
       .from('categories')
+      .select('*')
+      .order('name');
+    
+    const { data: subcategoriesData } = await supabase
+      .from('subcategories')
       .select('*')
       .order('name');
     
@@ -49,6 +55,7 @@ const StatsOverview = ({ refreshTrigger, selectedMonth, selectedYear }: StatsOve
       .eq('year', selectedYear);
     
     setCategories(categoriesData || []);
+    setSubcategories(subcategoriesData || []);
     setExpenses(expensesData || []);
     setBudgets(budgetsData || []);
     setLoading(false);
@@ -57,6 +64,12 @@ const StatsOverview = ({ refreshTrigger, selectedMonth, selectedYear }: StatsOve
   const getCategoryValue = (categoryId: string) => {
     return expenses
       .filter(e => e.category_id === categoryId)
+      .reduce((sum, e) => sum + parseFloat(String(e.amount || 0)), 0);
+  };
+
+  const getSubcategoryValue = (subcategoryId: string) => {
+    return expenses
+      .filter(e => e.subcategory_id === subcategoryId)
       .reduce((sum, e) => sum + parseFloat(String(e.amount || 0)), 0);
   };
 
@@ -98,6 +111,20 @@ const StatsOverview = ({ refreshTrigger, selectedMonth, selectedYear }: StatsOve
     return "bg-success";
   };
 
+  const toggleCategory = (categoryId: string) => {
+    const newExpanded = new Set(expandedCategories);
+    if (newExpanded.has(categoryId)) {
+      newExpanded.delete(categoryId);
+    } else {
+      newExpanded.add(categoryId);
+    }
+    setExpandedCategories(newExpanded);
+  };
+
+  const getCategorySubcategories = (categoryId: string) => {
+    return subcategories.filter(sub => sub.category_id === categoryId);
+  };
+
   if (loading) {
     return (
       <Card className="p-4 sm:p-6 shadow-lg gradient-card">
@@ -122,11 +149,28 @@ const StatsOverview = ({ refreshTrigger, selectedMonth, selectedYear }: StatsOve
       const budget = getCategoryBudget(category.id);
       const percentage = budget > 0 ? (value / budget) * 100 : 0;
       const isEditing = editingBudget === category.id;
+      const categorySubcategories = getCategorySubcategories(category.id);
+      const hasSubcategories = categorySubcategories.length > 0;
+      const isExpanded = expandedCategories.has(category.id);
 
       return (
         <div key={category.id} className="space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="font-medium text-foreground">{category.name}</span>
+            <div className="flex items-center gap-2">
+              {hasSubcategories && (
+                <button
+                  onClick={() => toggleCategory(category.id)}
+                  className="p-0.5 hover:bg-muted rounded"
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  )}
+                </button>
+              )}
+              <span className="font-medium text-foreground">{category.name}</span>
+            </div>
             <div className="flex items-center gap-2">
               <span className={`font-bold ${percentage >= 100 ? 'text-danger' : 'text-foreground'}`}>
                 R$ {value.toFixed(2)}
@@ -207,6 +251,25 @@ const StatsOverview = ({ refreshTrigger, selectedMonth, selectedYear }: StatsOve
             <p className="text-xs text-danger">
               Excedeu em R$ {(value - budget).toFixed(2)}
             </p>
+          )}
+          
+          {/* Subcategorias expandíveis */}
+          {hasSubcategories && isExpanded && (
+            <div className="ml-6 mt-2 space-y-2 border-l-2 border-muted pl-3">
+              {categorySubcategories.map((sub) => {
+                const subValue = getSubcategoryValue(sub.id);
+                if (subValue === 0) return null;
+                return (
+                  <div key={sub.id} className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">{sub.name}</span>
+                    <span className="font-medium text-foreground">R$ {subValue.toFixed(2)}</span>
+                  </div>
+                );
+              })}
+              {categorySubcategories.every(sub => getSubcategoryValue(sub.id) === 0) && (
+                <p className="text-xs text-muted-foreground italic">Sem gastos nas subcategorias</p>
+              )}
+            </div>
           )}
         </div>
       );

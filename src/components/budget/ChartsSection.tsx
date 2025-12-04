@@ -14,8 +14,10 @@ const ChartsSection = () => {
   const [peopleMonthlyData, setPeopleMonthlyData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>('all');
   const [selectedPerson, setSelectedPerson] = useState<string>('all');
   const [categories, setCategories] = useState<any[]>([]);
+  const [subcategories, setSubcategories] = useState<any[]>([]);
   const [people, setPeople] = useState<any[]>([]);
   const [singleCategoryData, setSingleCategoryData] = useState<any[]>([]);
 
@@ -33,7 +35,7 @@ const ChartsSection = () => {
     if (selectedCategory) {
       loadSingleCategoryData();
     }
-  }, [selectedCategory, categoryYear, selectedPerson]);
+  }, [selectedCategory, categoryYear, selectedSubcategory]);
 
   const loadChartData = async () => {
     setLoading(true);
@@ -44,6 +46,13 @@ const ChartsSection = () => {
       .select('*')
       .order('name');
     setCategories(categoriesData || []);
+    
+    // Carregar subcategorias
+    const { data: subcategoriesData } = await supabase
+      .from('subcategories')
+      .select('*')
+      .order('name');
+    setSubcategories(subcategoriesData || []);
     
     // Carregar pessoas
     const { data: peopleData } = await supabase
@@ -149,34 +158,56 @@ const ChartsSection = () => {
       return;
     }
 
-    // Uma categoria ao longo dos meses do ano
+    // Uma categoria ao longo dos meses do ano - Total + por pessoa
     const monthlyPromises = Array.from({ length: 12 }, async (_, i) => {
       const firstDay = new Date(categoryYear, i, 1);
       const lastDay = new Date(categoryYear, i + 1, 0);
       
       let query = supabase
         .from('expenses')
-        .select('amount')
+        .select(`
+          amount,
+          people (id, name, color)
+        `)
         .eq('category_id', selectedCategory)
         .gte('date', firstDay.toISOString().split('T')[0])
         .lte('date', lastDay.toISOString().split('T')[0]);
       
-      if (selectedPerson !== 'all') {
-        query = query.eq('person_id', selectedPerson);
+      if (selectedSubcategory !== 'all') {
+        query = query.eq('subcategory_id', selectedSubcategory);
       }
       
       const { data } = await query;
       
       const total = data?.reduce((sum, e) => sum + parseFloat(String(e.amount || 0)), 0) || 0;
       
-      return {
+      // Agrupar por pessoa
+      const peopleMap = new Map();
+      data?.forEach(e => {
+        if (e.people?.name) {
+          const current = peopleMap.get(e.people.name) || 0;
+          peopleMap.set(e.people.name, current + parseFloat(String(e.amount || 0)));
+        }
+      });
+      
+      const result: any = {
         month: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][i],
-        value: total
+        total: total
       };
+      
+      peopleMap.forEach((value, name) => {
+        result[name] = value;
+      });
+      
+      return result;
     });
     
     const results = await Promise.all(monthlyPromises);
     setSingleCategoryData(results);
+  };
+
+  const getSubcategoriesForCategory = (categoryId: string) => {
+    return subcategories.filter(sub => sub.category_id === categoryId);
   };
 
   if (loading) {
@@ -387,14 +418,17 @@ const ChartsSection = () => {
             </div>
             <div>
               <h2 className="text-lg sm:text-2xl font-bold text-foreground">Evolução por Categoria</h2>
-              <p className="text-xs sm:text-sm text-muted-foreground">Acompanhamento mensal</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Total e participantes ao longo do ano</p>
             </div>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
             <select 
               value={selectedCategory} 
-              onChange={(e) => setSelectedCategory(e.target.value)}
+              onChange={(e) => {
+                setSelectedCategory(e.target.value);
+                setSelectedSubcategory('all');
+              }}
               className="h-9 px-3 bg-card border border-border rounded-md text-foreground text-sm min-w-[150px]"
             >
               <option value="">Selecione uma Categoria</option>
@@ -403,6 +437,19 @@ const ChartsSection = () => {
               ))}
             </select>
 
+            {selectedCategory && getSubcategoriesForCategory(selectedCategory).length > 0 && (
+              <select 
+                value={selectedSubcategory} 
+                onChange={(e) => setSelectedSubcategory(e.target.value)}
+                className="h-9 px-3 bg-card border border-border rounded-md text-foreground text-sm min-w-[150px]"
+              >
+                <option value="all">Todas Subcategorias</option>
+                {getSubcategoriesForCategory(selectedCategory).map(sub => (
+                  <option key={sub.id} value={sub.id}>{sub.name}</option>
+                ))}
+              </select>
+            )}
+
             <select 
               value={categoryYear} 
               onChange={(e) => setCategoryYear(parseInt(e.target.value))}
@@ -410,17 +457,6 @@ const ChartsSection = () => {
             >
               {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
                 <option key={year} value={year}>{year}</option>
-              ))}
-            </select>
-
-            <select 
-              value={selectedPerson} 
-              onChange={(e) => setSelectedPerson(e.target.value)}
-              className="h-9 px-3 bg-card border border-border rounded-md text-foreground text-sm min-w-[150px]"
-            >
-              <option value="all">Todos</option>
-              {people.map(person => (
-                <option key={person.id} value={person.id}>{person.name}</option>
               ))}
             </select>
           </div>
@@ -456,12 +492,26 @@ const ChartsSection = () => {
                 }}
                 formatter={(value: any) => `R$ ${parseFloat(value).toFixed(2)}`}
               />
+              <Legend wrapperStyle={{ fontSize: window.innerWidth < 640 ? '12px' : '14px' }} />
               <Line 
                 type="monotone" 
-                dataKey="value" 
+                dataKey="total" 
                 stroke="hsl(var(--primary))" 
-                strokeWidth={2}
+                strokeWidth={3}
+                name="Total"
+                dot={{ r: 4 }}
               />
+              {peopleMonthlyData.map((person, index) => (
+                <Line 
+                  key={person.name}
+                  type="monotone" 
+                  dataKey={person.name} 
+                  stroke={person.color || COLORS[index % COLORS.length]}
+                  strokeWidth={2}
+                  name={person.name}
+                  dot={{ r: 3 }}
+                />
+              ))}
             </LineChart>
           </ResponsiveContainer>
         )}
