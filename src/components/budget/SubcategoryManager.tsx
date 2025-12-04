@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { 
-  Plus, Trash2, ChevronDown, ChevronRight, FolderOpen, Folder
+  Plus, Trash2, ChevronDown, ChevronRight, FolderOpen, Folder, ArrowLeft
 } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,16 +29,41 @@ interface Category {
 }
 
 interface SubcategoryManagerProps {
-  categories: Category[];
-  onUpdate: () => void;
+  categories?: Category[];
+  onUpdate?: () => void;
+  onBack?: () => void;
 }
 
-const SubcategoryManager = ({ categories, onUpdate }: SubcategoryManagerProps) => {
+const SubcategoryManager = ({ categories: externalCategories, onUpdate, onBack }: SubcategoryManagerProps) => {
   const { toast } = useToast();
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [subcategories, setSubcategories] = useState<Map<string, Subcategory[]>>(new Map());
   const [newSubcategory, setNewSubcategory] = useState<{ [key: string]: string }>({});
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<Category[]>(externalCategories || []);
+
+  useEffect(() => {
+    if (!externalCategories) {
+      loadCategories();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (externalCategories) {
+      setCategories(externalCategories);
+    }
+  }, [externalCategories]);
+
+  const loadCategories = async () => {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .order('name');
+    
+    if (!error && data) {
+      setCategories(data);
+    }
+  };
 
   const getIconComponent = (iconName: string) => {
     const Icon = LucideIcons[iconName as keyof typeof LucideIcons] as any;
@@ -129,7 +154,7 @@ const SubcategoryManager = ({ categories, onUpdate }: SubcategoryManagerProps) =
       
       setNewSubcategory({ ...newSubcategory, [category.id]: "" });
       loadSubcategories();
-      onUpdate();
+      onUpdate?.();
     }
   };
 
@@ -159,7 +184,7 @@ const SubcategoryManager = ({ categories, onUpdate }: SubcategoryManagerProps) =
       });
       
       loadSubcategories();
-      onUpdate();
+      onUpdate?.();
     }
   };
 
@@ -172,11 +197,22 @@ const SubcategoryManager = ({ categories, onUpdate }: SubcategoryManagerProps) =
   };
 
   return (
-    <Card className="p-4 mt-4 bg-accent/30 border-dashed">
+    <Card className={`p-4 ${onBack ? 'max-w-2xl mx-auto shadow-lg gradient-card' : 'mt-4 bg-accent/30 border-dashed'}`}>
+      {onBack && (
+        <Button
+          variant="ghost"
+          onClick={onBack}
+          className="mb-4 -ml-2 text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Voltar
+        </Button>
+      )}
+      
       <div className="flex items-center justify-between mb-4">
-        <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
-          <FolderOpen className="w-4 h-4 text-primary" />
-          Subcategorias (opcional)
+        <h4 className={`font-semibold text-foreground flex items-center gap-2 ${onBack ? 'text-xl' : 'text-sm'}`}>
+          <FolderOpen className={`text-primary ${onBack ? 'w-5 h-5' : 'w-4 h-4'}`} />
+          {onBack ? 'Gerenciar Subcategorias' : 'Subcategorias (opcional)'}
         </h4>
         <div className="flex gap-2">
           <Button variant="ghost" size="sm" onClick={expandAll} className="text-xs h-7">
