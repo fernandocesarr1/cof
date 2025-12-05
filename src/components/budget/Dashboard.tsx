@@ -19,10 +19,9 @@ import ExpenseForm from "./ExpenseForm";
 import ExpenseList from "./ExpenseList";
 import StatsOverview from "./StatsOverview";
 import ChartsSection from "./ChartsSection";
-import CategoryManager from "./CategoryManager";
+import CategorySubcategoryManager from "./CategorySubcategoryManager";
 import Notifications from "./Notifications";
 import PersonManager from "./PersonManager";
-import SubcategoryManager from "./SubcategoryManager";
 import SettingsComponent from "./Settings";
 import MonthYearSelector from "./MonthYearSelector";
 
@@ -36,7 +35,6 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
   const [activeTab, setActiveTab] = useState("add");
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [showPersonManager, setShowPersonManager] = useState(false);
-  const [showSubcategoryManager, setShowSubcategoryManager] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [totalMes, setTotalMes] = useState(0);
   const [gastosFixos, setGastosFixos] = useState(0);
@@ -216,16 +214,13 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
 
           <TabsContent value="add" className="animate-fade-in">
             {showCategoryManager ? (
-              <CategoryManager onBack={() => setShowCategoryManager(false)} />
+              <CategorySubcategoryManager onBack={() => setShowCategoryManager(false)} />
             ) : showPersonManager ? (
               <PersonManager onBack={() => setShowPersonManager(false)} />
-            ) : showSubcategoryManager ? (
-              <SubcategoryManager onBack={() => setShowSubcategoryManager(false)} />
             ) : (
               <ExpenseForm 
                 onManageCategories={() => setShowCategoryManager(true)}
                 onManagePeople={() => setShowPersonManager(true)}
-                onManageSubcategories={() => setShowSubcategoryManager(true)}
                 onExpenseAdded={handleExpenseAdded}
               />
             )}

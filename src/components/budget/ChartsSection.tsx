@@ -276,6 +276,7 @@ const ChartsSection = () => {
               strokeWidth={3}
               name="Total"
               dot={{ r: 4 }}
+              connectNulls
             />
             {peopleMonthlyData.map((person, index) => (
               <Line 
@@ -284,8 +285,10 @@ const ChartsSection = () => {
                 dataKey={person.name} 
                 stroke={person.color || COLORS[index % COLORS.length]}
                 strokeWidth={2}
+                strokeDasharray="5 5"
                 name={person.name}
                 dot={{ r: 3 }}
+                connectNulls
               />
             ))}
           </LineChart>
@@ -500,6 +503,7 @@ const ChartsSection = () => {
                 strokeWidth={3}
                 name="Total"
                 dot={{ r: 4 }}
+                connectNulls
               />
               {peopleMonthlyData.map((person, index) => (
                 <Line 
@@ -508,8 +512,10 @@ const ChartsSection = () => {
                   dataKey={person.name} 
                   stroke={person.color || COLORS[index % COLORS.length]}
                   strokeWidth={2}
+                  strokeDasharray="5 5"
                   name={person.name}
                   dot={{ r: 3 }}
+                  connectNulls
                 />
               ))}
             </LineChart>

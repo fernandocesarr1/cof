@@ -15,11 +15,10 @@ import * as LucideIcons from "lucide-react";
 interface ExpenseFormProps {
   onManageCategories: () => void;
   onManagePeople: () => void;
-  onManageSubcategories: () => void;
   onExpenseAdded?: () => void;
 }
 
-const ExpenseForm = ({ onManageCategories, onManagePeople, onManageSubcategories, onExpenseAdded }: ExpenseFormProps) => {
+const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: ExpenseFormProps) => {
   const { toast } = useToast();
   const [categories, setCategories] = useState<any[]>([]);
   const [subcategories, setSubcategories] = useState<any[]>([]);
@@ -358,14 +357,6 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onManageSubcategories
               >
                 <Settings className="w-3 h-3" />
                 Gerenciar Categorias
-              </button>
-              <button
-                type="button"
-                onClick={onManageSubcategories}
-                className="text-sm text-primary hover:underline flex items-center gap-1"
-              >
-                <Tag className="w-3 h-3" />
-                Gerenciar Subcategorias
               </button>
               <button
                 type="button"
