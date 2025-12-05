@@ -13,12 +13,22 @@ import {
   DollarSign,
   User,
   Tag,
-  FileText
+  FileText,
+  FileSpreadsheet
 } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-logger";
 import ExpenseEditDialog from "./ExpenseEditDialog";
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ExpenseListProps {
   refreshTrigger?: number;
@@ -53,6 +63,10 @@ const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
           color,
           icon,
           tipo
+        ),
+        subcategories (
+          id,
+          name
         ),
         people (
           id,
@@ -91,7 +105,6 @@ const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
         variant: "destructive",
       });
     } else {
-      // Registrar atividade
       await logActivity({
         action: "deletar",
         entityType: "Despesa",
@@ -123,6 +136,60 @@ const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
     setEditDialogOpen(true);
   };
 
+  const exportToExcel = () => {
+    const data = filteredExpenses.map(expense => ({
+      'Data': new Date(expense.date + 'T00:00:00').toLocaleDateString('pt-BR'),
+      'Categoria': expense.categories?.name || 'Sem categoria',
+      'Subcategoria': expense.subcategories?.name || '-',
+      'Descrição': expense.description,
+      'Valor': parseFloat(expense.amount).toFixed(2),
+      'Pessoa': expense.people?.name || '-',
+      'Tipo': expense.categories?.tipo === 'fixo' ? 'Fixo' : 'Variável'
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Gastos');
+    XLSX.writeFile(wb, `gastos_${new Date().toISOString().split('T')[0]}.xlsx`);
+    
+    toast({ title: "Excel exportado com sucesso!" });
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text('Relatório de Gastos', 14, 22);
+    doc.setFontSize(10);
+    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 14, 30);
+
+    const tableData = filteredExpenses.map(expense => [
+      new Date(expense.date + 'T00:00:00').toLocaleDateString('pt-BR'),
+      expense.categories?.name || 'Sem categoria',
+      expense.subcategories?.name || '-',
+      expense.description.substring(0, 30),
+      `R$ ${parseFloat(expense.amount).toFixed(2)}`,
+      expense.people?.name || '-'
+    ]);
+
+    autoTable(doc, {
+      head: [['Data', 'Categoria', 'Subcategoria', 'Descrição', 'Valor', 'Pessoa']],
+      body: tableData,
+      startY: 35,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [139, 92, 246] }
+    });
+
+    const total = filteredExpenses.reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+    const finalY = (doc as any).lastAutoTable.finalY || 35;
+    doc.setFontSize(12);
+    doc.text(`Total: R$ ${total.toFixed(2)}`, 14, finalY + 10);
+
+    doc.save(`gastos_${new Date().toISOString().split('T')[0]}.pdf`);
+    
+    toast({ title: "PDF exportado com sucesso!" });
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <Card className="p-4 sm:p-6 shadow-lg gradient-card">
@@ -131,10 +198,24 @@ const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
             <h2 className="text-xl sm:text-2xl font-bold text-foreground">Lista de Gastos</h2>
             <p className="text-xs sm:text-sm text-muted-foreground">Visualize e gerencie suas despesas</p>
           </div>
-          <Button variant="outline" className="gap-2 w-full sm:w-auto">
-            <Download className="w-4 h-4" />
-            Exportar
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2 w-full sm:w-auto">
+                <Download className="w-4 h-4" />
+                Exportar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-card border z-50">
+              <DropdownMenuItem onClick={exportToExcel} className="gap-2 cursor-pointer">
+                <FileSpreadsheet className="w-4 h-4" />
+                Excel (.xlsx)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportToPDF} className="gap-2 cursor-pointer">
+                <FileText className="w-4 h-4" />
+                PDF (.pdf)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <div className="relative mb-4 sm:mb-6">
@@ -179,6 +260,11 @@ const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
                       <span className="font-semibold text-sm text-foreground truncate">
                         {expense.categories?.name || "Sem categoria"}
                       </span>
+                      {expense.subcategories?.name && (
+                        <span className="text-xs text-muted-foreground">
+                          › {expense.subcategories.name}
+                        </span>
+                      )}
                       {expense.people && (
                         <div 
                           className="w-4 h-4 rounded-full flex-shrink-0" 
@@ -225,7 +311,7 @@ const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
           </div>
         )}
 
-        {filteredExpenses.length === 0 && (
+        {filteredExpenses.length === 0 && !loading && (
           <div className="text-center py-12">
             <Tag className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground">
