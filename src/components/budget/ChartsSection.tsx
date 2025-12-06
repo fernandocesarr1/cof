@@ -62,6 +62,11 @@ const ChartsSection = () => {
     setPeople(peopleData || []);
     
     // Dados mensais do ano selecionado - Total + por pessoa
+    const allPeopleNames = new Map<string, string>();
+    peopleData?.forEach(person => {
+      allPeopleNames.set(person.name, person.color);
+    });
+    
     const monthlyPromises = Array.from({ length: 12 }, async (_, i) => {
       const firstDay = new Date(selectedYear, i, 1);
       const lastDay = new Date(selectedYear, i + 1, 0);
@@ -77,22 +82,22 @@ const ChartsSection = () => {
       
       const total = data?.reduce((sum, e) => sum + parseFloat(String(e.amount || 0)), 0) || 0;
       
-      // Agrupar por pessoa
-      const peopleMap = new Map();
-      data?.forEach(e => {
-        if (e.people?.name) {
-          const current = peopleMap.get(e.people.name) || 0;
-          peopleMap.set(e.people.name, current + parseFloat(String(e.amount || 0)));
-        }
-      });
-      
+      // Inicializar todas as pessoas com 0
       const result: any = {
         month: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][i],
         total: total
       };
       
-      peopleMap.forEach((value, name) => {
-        result[name] = value;
+      // Inicializar todos com 0
+      allPeopleNames.forEach((color, name) => {
+        result[name] = 0;
+      });
+      
+      // Agrupar por pessoa
+      data?.forEach(e => {
+        if (e.people?.name) {
+          result[e.people.name] = (result[e.people.name] || 0) + parseFloat(String(e.amount || 0));
+        }
       });
       
       return result;
@@ -101,11 +106,6 @@ const ChartsSection = () => {
     const monthlyResults = await Promise.all(monthlyPromises);
     setMonthlyData(monthlyResults);
     
-    // Obter nomes únicos de pessoas para o gráfico com cores
-    const allPeopleNames = new Map<string, string>();
-    peopleData?.forEach(person => {
-      allPeopleNames.set(person.name, person.color);
-    });
     setPeopleMonthlyData(Array.from(allPeopleNames.entries()).map(([name, color]) => ({ name, color })));
     
     setLoading(false);
@@ -181,22 +181,21 @@ const ChartsSection = () => {
       
       const total = data?.reduce((sum, e) => sum + parseFloat(String(e.amount || 0)), 0) || 0;
       
-      // Agrupar por pessoa
-      const peopleMap = new Map();
-      data?.forEach(e => {
-        if (e.people?.name) {
-          const current = peopleMap.get(e.people.name) || 0;
-          peopleMap.set(e.people.name, current + parseFloat(String(e.amount || 0)));
-        }
-      });
-      
       const result: any = {
         month: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'][i],
         total: total
       };
       
-      peopleMap.forEach((value, name) => {
-        result[name] = value;
+      // Inicializar todas as pessoas com 0
+      people.forEach(p => {
+        result[p.name] = 0;
+      });
+      
+      // Agrupar por pessoa
+      data?.forEach(e => {
+        if (e.people?.name) {
+          result[e.people.name] = (result[e.people.name] || 0) + parseFloat(String(e.amount || 0));
+        }
       });
       
       return result;

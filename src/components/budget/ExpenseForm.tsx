@@ -9,7 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import { PlusCircle, DollarSign, Calendar, FileText, User, Tag, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-logger";
-import ExpenseImport from "./ExpenseImport";
 import * as LucideIcons from "lucide-react";
 
 interface ExpenseFormProps {
@@ -349,7 +348,7 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
                 Limpar
               </Button>
             </div>
-            <div className="flex gap-4 justify-center flex-wrap">
+            <div className="flex justify-center">
               <button
                 type="button"
                 onClick={onManageCategories}
@@ -358,22 +357,10 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
                 <Settings className="w-3 h-3" />
                 Gerenciar Categorias
               </button>
-              <button
-                type="button"
-                onClick={onManagePeople}
-                className="text-sm text-primary hover:underline flex items-center gap-1"
-              >
-                <User className="w-3 h-3" />
-                Gerenciar Pessoas
-              </button>
             </div>
           </div>
         </form>
       </Card>
-
-      <div className="max-w-2xl mx-auto">
-        <ExpenseImport />
-      </div>
     </div>
   );
 };
