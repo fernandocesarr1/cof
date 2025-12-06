@@ -2,33 +2,17 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Search, 
   Trash2, 
   Edit, 
-  Download,
-  Calendar,
-  DollarSign,
-  User,
-  Tag,
-  FileText,
-  FileSpreadsheet
+  Tag
 } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-logger";
 import ExpenseEditDialog from "./ExpenseEditDialog";
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface ExpenseListProps {
   refreshTrigger?: number;
@@ -37,6 +21,7 @@ interface ExpenseListProps {
 const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingExpense, setEditingExpense] = useState<any>(null);
@@ -44,7 +29,7 @@ const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
 
   useEffect(() => {
     loadExpenses();
-  }, [refreshTrigger]);
+  }, [refreshTrigger, selectedYear]);
 
   const getIconComponent = (iconName: string) => {
     const Icon = LucideIcons[iconName as keyof typeof LucideIcons] as any;
@@ -53,6 +38,9 @@ const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
 
   const loadExpenses = async () => {
     setLoading(true);
+    const firstDay = new Date(selectedYear, 0, 1);
+    const lastDay = new Date(selectedYear, 11, 31);
+    
     const { data, error } = await supabase
       .from('expenses')
       .select(`
@@ -71,9 +59,12 @@ const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
         people (
           id,
           name,
-          color
+          color,
+          avatar_url
         )
       `)
+      .gte('date', firstDay.toISOString().split('T')[0])
+      .lte('date', lastDay.toISOString().split('T')[0])
       .order('date', { ascending: false })
       .order('created_at', { ascending: false });
 
@@ -136,60 +127,6 @@ const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
     setEditDialogOpen(true);
   };
 
-  const exportToExcel = () => {
-    const data = filteredExpenses.map(expense => ({
-      'Data': new Date(expense.date + 'T00:00:00').toLocaleDateString('pt-BR'),
-      'Categoria': expense.categories?.name || 'Sem categoria',
-      'Subcategoria': expense.subcategories?.name || '-',
-      'Descrição': expense.description,
-      'Valor': parseFloat(expense.amount).toFixed(2),
-      'Pessoa': expense.people?.name || '-',
-      'Tipo': expense.categories?.tipo === 'fixo' ? 'Fixo' : 'Variável'
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Gastos');
-    XLSX.writeFile(wb, `gastos_${new Date().toISOString().split('T')[0]}.xlsx`);
-    
-    toast({ title: "Excel exportado com sucesso!" });
-  };
-
-  const exportToPDF = () => {
-    const doc = new jsPDF();
-    
-    doc.setFontSize(18);
-    doc.text('Relatório de Gastos', 14, 22);
-    doc.setFontSize(10);
-    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 14, 30);
-
-    const tableData = filteredExpenses.map(expense => [
-      new Date(expense.date + 'T00:00:00').toLocaleDateString('pt-BR'),
-      expense.categories?.name || 'Sem categoria',
-      expense.subcategories?.name || '-',
-      expense.description.substring(0, 30),
-      `R$ ${parseFloat(expense.amount).toFixed(2)}`,
-      expense.people?.name || '-'
-    ]);
-
-    autoTable(doc, {
-      head: [['Data', 'Categoria', 'Subcategoria', 'Descrição', 'Valor', 'Pessoa']],
-      body: tableData,
-      startY: 35,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [139, 92, 246] }
-    });
-
-    const total = filteredExpenses.reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
-    const finalY = (doc as any).lastAutoTable.finalY || 35;
-    doc.setFontSize(12);
-    doc.text(`Total: R$ ${total.toFixed(2)}`, 14, finalY + 10);
-
-    doc.save(`gastos_${new Date().toISOString().split('T')[0]}.pdf`);
-    
-    toast({ title: "PDF exportado com sucesso!" });
-  };
-
   return (
     <div className="space-y-4 sm:space-y-6">
       <Card className="p-4 sm:p-6 shadow-lg gradient-card">
@@ -198,24 +135,15 @@ const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
             <h2 className="text-xl sm:text-2xl font-bold text-foreground">Lista de Gastos</h2>
             <p className="text-xs sm:text-sm text-muted-foreground">Visualize e gerencie suas despesas</p>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2 w-full sm:w-auto">
-                <Download className="w-4 h-4" />
-                Exportar
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-card border z-50">
-              <DropdownMenuItem onClick={exportToExcel} className="gap-2 cursor-pointer">
-                <FileSpreadsheet className="w-4 h-4" />
-                Excel (.xlsx)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={exportToPDF} className="gap-2 cursor-pointer">
-                <FileText className="w-4 h-4" />
-                PDF (.pdf)
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <select 
+            value={selectedYear} 
+            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+            className="h-10 px-3 bg-card border border-border rounded-md text-foreground text-sm"
+          >
+            {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
         </div>
 
         <div className="relative mb-4 sm:mb-6">
@@ -293,11 +221,20 @@ const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
                                 </span>
                               )}
                               {expense.people && (
-                                <div 
-                                  className="w-4 h-4 rounded-full flex-shrink-0" 
-                                  style={{ backgroundColor: expense.people.color }}
-                                  title={expense.people.name}
-                                />
+                                expense.people.avatar_url ? (
+                                  <img 
+                                    src={expense.people.avatar_url} 
+                                    alt={expense.people.name}
+                                    className="w-5 h-5 rounded-full object-cover flex-shrink-0"
+                                    title={expense.people.name}
+                                  />
+                                ) : (
+                                  <div 
+                                    className="w-4 h-4 rounded-full flex-shrink-0" 
+                                    style={{ backgroundColor: expense.people.color }}
+                                    title={expense.people.name}
+                                  />
+                                )
                               )}
                             </div>
 
