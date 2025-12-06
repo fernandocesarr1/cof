@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Settings as SettingsIcon, Key, Save, Users, Trash2, Plus, Upload, FileSpreadsheet, Download, FileText, CheckCircle, AlertCircle } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Settings as SettingsIcon, Key, Save, Users, Trash2, Plus, Upload, FileSpreadsheet, Download, FileText, CheckCircle, AlertCircle, Camera, Edit } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { logActivity } from "@/lib/activity-logger";
@@ -31,6 +32,8 @@ const Settings = () => {
   const [newPersonName, setNewPersonName] = useState("");
   const [newPersonColor, setNewPersonColor] = useState("#8B5CF6");
   const [loadingPeople, setLoadingPeople] = useState(false);
+  const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Importar
   const [importing, setImporting] = useState(false);
@@ -55,6 +58,37 @@ const Settings = () => {
       .select(`*, categories (name, tipo), subcategories (name), people (name)`)
       .order('date', { ascending: false });
     setExpenses(data || []);
+  };
+
+  const handleAvatarUpload = async (personId: string, file: File) => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${personId}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('people')
+        .update({ avatar_url: publicUrl })
+        .eq('id', personId);
+
+      if (updateError) throw updateError;
+
+      toast({ title: "Foto atualizada!" });
+      loadPeople();
+      setEditingPersonId(null);
+    } catch (error: any) {
+      toast({ title: "Erro ao enviar foto", description: error.message, variant: "destructive" });
+    }
   };
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -295,9 +329,25 @@ const Settings = () => {
 
         <div className="space-y-2">
           {people.map((person) => (
-            <div key={person.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full" style={{ backgroundColor: person.color }} />
+            <div key={person.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="relative group">
+                  <Avatar className="w-10 h-10 border-2" style={{ borderColor: person.color }}>
+                    <AvatarImage src={person.avatar_url} alt={person.name} />
+                    <AvatarFallback style={{ backgroundColor: person.color }} className="text-white text-xs">
+                      {person.name.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <button
+                    onClick={() => {
+                      setEditingPersonId(person.id);
+                      fileInputRef.current?.click();
+                    }}
+                    className="absolute inset-0 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                  >
+                    <Camera className="w-4 h-4 text-white" />
+                  </button>
+                </div>
                 <span className="text-sm font-medium">{person.name}</span>
               </div>
               <Button variant="ghost" size="icon" className="h-8 w-8 text-danger" onClick={() => handleDeletePerson(person.id, person.name)}>
@@ -305,6 +355,19 @@ const Settings = () => {
               </Button>
             </div>
           ))}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file && editingPersonId) {
+                handleAvatarUpload(editingPersonId, file);
+              }
+              e.target.value = '';
+            }}
+          />
         </div>
       </Card>
 
