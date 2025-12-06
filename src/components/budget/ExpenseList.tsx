@@ -234,80 +234,111 @@ const ExpenseList = ({ refreshTrigger }: ExpenseListProps) => {
             <p className="text-muted-foreground">Carregando...</p>
           </div>
         ) : (
-          <div className="space-y-1.5">
-            {filteredExpenses.map((expense) => (
-              <Card 
-                key={expense.id} 
-                className="p-2 hover:shadow-md transition-all duration-300 border-l-4"
-                style={{
-                  borderLeftColor: expense.categories?.color || "hsl(var(--primary))"
-                }}
-              >
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      {expense.categories && (() => {
-                        const IconComponent = getIconComponent(expense.categories.icon);
-                        return (
-                          <div 
-                            className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                            style={{ backgroundColor: expense.categories.color }}
-                          >
-                            <IconComponent className="w-3.5 h-3.5 text-white" />
+          <div className="space-y-4">
+            {(() => {
+              // Agrupar despesas por mês/ano
+              const groupedByMonth: Record<string, typeof filteredExpenses> = {};
+              filteredExpenses.forEach(expense => {
+                const date = new Date(expense.date + 'T00:00:00');
+                const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                if (!groupedByMonth[key]) groupedByMonth[key] = [];
+                groupedByMonth[key].push(expense);
+              });
+              
+              const sortedMonths = Object.keys(groupedByMonth).sort((a, b) => b.localeCompare(a));
+              const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+              
+              return sortedMonths.map(monthKey => {
+                const [year, month] = monthKey.split('-');
+                const monthTotal = groupedByMonth[monthKey].reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+                
+                return (
+                  <div key={monthKey} className="space-y-1.5">
+                    <div className="flex items-center justify-between py-2 px-3 bg-muted/50 rounded-lg sticky top-0">
+                      <h3 className="font-semibold text-foreground text-sm">
+                        {monthNames[parseInt(month) - 1]} {year}
+                      </h3>
+                      <span className="text-sm font-bold text-primary">
+                        R$ {monthTotal.toFixed(2)}
+                      </span>
+                    </div>
+                    {groupedByMonth[monthKey].map((expense) => (
+                      <Card 
+                        key={expense.id} 
+                        className="p-2 hover:shadow-md transition-all duration-300 border-l-4"
+                        style={{
+                          borderLeftColor: expense.categories?.color || "hsl(var(--primary))"
+                        }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              {expense.categories && (() => {
+                                const IconComponent = getIconComponent(expense.categories.icon);
+                                return (
+                                  <div 
+                                    className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                                    style={{ backgroundColor: expense.categories.color }}
+                                  >
+                                    <IconComponent className="w-3.5 h-3.5 text-white" />
+                                  </div>
+                                );
+                              })()}
+                              <span className="font-semibold text-sm text-foreground truncate">
+                                {expense.categories?.name || "Sem categoria"}
+                              </span>
+                              {expense.subcategories?.name && (
+                                <span className="text-xs text-muted-foreground">
+                                  › {expense.subcategories.name}
+                                </span>
+                              )}
+                              {expense.people && (
+                                <div 
+                                  className="w-4 h-4 rounded-full flex-shrink-0" 
+                                  style={{ backgroundColor: expense.people.color }}
+                                  title={expense.people.name}
+                                />
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                              <span className="font-bold text-foreground">
+                                R$ {parseFloat(expense.amount).toFixed(2)}
+                              </span>
+                              <span className="truncate">
+                                {new Date(expense.date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                              </span>
+                              <span className="truncate flex-1 min-w-0">
+                                {expense.description}
+                              </span>
+                            </div>
                           </div>
-                        );
-                      })()}
-                      <span className="font-semibold text-sm text-foreground truncate">
-                        {expense.categories?.name || "Sem categoria"}
-                      </span>
-                      {expense.subcategories?.name && (
-                        <span className="text-xs text-muted-foreground">
-                          › {expense.subcategories.name}
-                        </span>
-                      )}
-                      {expense.people && (
-                        <div 
-                          className="w-4 h-4 rounded-full flex-shrink-0" 
-                          style={{ backgroundColor: expense.people.color }}
-                          title={expense.people.name}
-                        />
-                      )}
-                    </div>
 
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <span className="font-bold text-foreground">
-                        R$ {parseFloat(expense.amount).toFixed(2)}
-                      </span>
-                      <span className="truncate">
-                        {new Date(expense.date + 'T00:00:00').toLocaleDateString('pt-BR')}
-                      </span>
-                      <span className="truncate flex-1 min-w-0">
-                        {expense.description}
-                      </span>
-                    </div>
+                          <div className="flex gap-1 flex-shrink-0">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7 hover:bg-primary/10"
+                              onClick={() => handleEdit(expense)}
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7 hover:bg-danger/10 hover:text-danger"
+                              onClick={() => handleDelete(expense.id)}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
                   </div>
-
-                  <div className="flex gap-1 flex-shrink-0">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-7 w-7 hover:bg-primary/10"
-                      onClick={() => handleEdit(expense)}
-                    >
-                      <Edit className="w-3.5 h-3.5" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-7 w-7 hover:bg-danger/10 hover:text-danger"
-                      onClick={() => handleDelete(expense.id)}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            ))}
+                );
+              });
+            })()}
           </div>
         )}
 
