@@ -37,6 +37,7 @@ const Settings = () => {
 
   // Importar
   const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState<{ current: number; total: number } | null>(null);
   const [importResult, setImportResult] = useState<{ success: number; failed: number } | null>(null);
 
   // Exportar
@@ -189,8 +190,12 @@ const Settings = () => {
 
       let successCount = 0;
       let failedCount = 0;
+      const total = jsonData.length;
+      setImportProgress({ current: 0, total });
 
-      for (const row of jsonData) {
+      for (let i = 0; i < jsonData.length; i++) {
+        const row = jsonData[i];
+        setImportProgress({ current: i + 1, total });
         try {
           const category = categories?.find(c => c.name.toLowerCase() === row.categoria?.toLowerCase());
           const person = peopleData?.find(p => p.name.toLowerCase() === row.pessoa?.toLowerCase());
@@ -240,6 +245,7 @@ const Settings = () => {
       toast({ title: "Erro ao processar planilha", variant: "destructive" });
     } finally {
       setImporting(false);
+      setImportProgress(null);
       e.target.value = '';
     }
   };
@@ -398,7 +404,9 @@ const Settings = () => {
             <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFileUpload} disabled={importing} className="hidden" id="file-upload-settings" />
             <Button asChild disabled={importing} variant="outline" className="w-full">
               <label htmlFor="file-upload-settings" className="cursor-pointer">
-                {importing ? "Importando..." : "Selecionar Arquivo"}
+                {importing && importProgress 
+                  ? `Importando ${importProgress.current}/${importProgress.total}...` 
+                  : "Selecionar Arquivo"}
               </label>
             </Button>
             {importResult && (
