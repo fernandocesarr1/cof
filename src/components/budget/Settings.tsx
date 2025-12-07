@@ -225,7 +225,7 @@ const Settings = () => {
             failedCount++;
           } else {
             successCount++;
-            await logActivity({ action: 'criar', entityType: 'Despesa', entityName: row.descricao, personId: person?.id });
+            await logActivity({ action: 'criar', entityType: 'Despesa', entityName: row.descricao, details: 'Importado via planilha', personId: person?.id });
           }
         } catch {
           failedCount++;
@@ -244,7 +244,7 @@ const Settings = () => {
     }
   };
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     const data = expenses.map(expense => ({
       'Data': new Date(expense.date + 'T00:00:00').toLocaleDateString('pt-BR'),
       'Categoria': expense.categories?.name || 'Sem categoria',
@@ -260,9 +260,10 @@ const Settings = () => {
     XLSX.utils.book_append_sheet(wb, ws, 'Gastos');
     XLSX.writeFile(wb, `gastos_${new Date().toISOString().split('T')[0]}.xlsx`);
     toast({ title: "Excel exportado!" });
+    await logActivity({ action: 'criar', entityType: 'Despesa', entityName: 'Exportação Excel', details: `${expenses.length} gastos exportados` });
   };
 
-  const exportToPDF = () => {
+  const exportToPDF = async () => {
     const doc = new jsPDF();
     doc.setFontSize(18);
     doc.text('Relatório de Gastos', 14, 22);
@@ -293,6 +294,7 @@ const Settings = () => {
 
     doc.save(`gastos_${new Date().toISOString().split('T')[0]}.pdf`);
     toast({ title: "PDF exportado!" });
+    await logActivity({ action: 'criar', entityType: 'Despesa', entityName: 'Exportação PDF', details: `${expenses.length} gastos exportados` });
   };
 
   return (
@@ -390,7 +392,9 @@ const Settings = () => {
               <Upload className="w-5 h-5 text-muted-foreground" />
               <h3 className="font-semibold">Importar Despesas</h3>
             </div>
-            <p className="text-xs text-muted-foreground mb-3">Formato: data, descricao, valor, categoria, pessoa</p>
+            <p className="text-xs text-muted-foreground mb-3">
+              Colunas: data, descricao, valor, categoria (opcional), pessoa (opcional)
+            </p>
             <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFileUpload} disabled={importing} className="hidden" id="file-upload-settings" />
             <Button asChild disabled={importing} variant="outline" className="w-full">
               <label htmlFor="file-upload-settings" className="cursor-pointer">

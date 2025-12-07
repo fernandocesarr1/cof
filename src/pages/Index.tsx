@@ -12,7 +12,7 @@ const Index = () => {
 
   const handleLogin = () => {
     // Senha padrão para demonstração
-    if (password === "familia2024" || password === "demo") {
+    if (password === "123" || password === "demo") {
       setIsAuthenticated(true);
       setError("");
     } else {
