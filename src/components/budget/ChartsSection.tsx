@@ -4,6 +4,7 @@ import { TrendingUp, PieChart as PieChartIcon, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import MonthYearSelector from "./MonthYearSelector";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const ChartsSection = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -20,6 +21,7 @@ const ChartsSection = () => {
   const [subcategories, setSubcategories] = useState<any[]>([]);
   const [people, setPeople] = useState<any[]>([]);
   const [singleCategoryData, setSingleCategoryData] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<string>('total');
 
   const COLORS = ['#8B5CF6', '#EC4899', '#3B82F6', '#10B981', '#F59E0B', '#EF4444'];
 
@@ -221,7 +223,7 @@ const ChartsSection = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Evolução Mensal - Total + Pessoas */}
+      {/* Gráfico Unificado - Evolução Mensal */}
       <Card className="p-4 sm:p-6 shadow-lg gradient-card">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
           <div className="flex items-center gap-2 sm:gap-3">
@@ -233,65 +235,179 @@ const ChartsSection = () => {
               <p className="text-xs sm:text-sm text-muted-foreground">Gastos ao longo do ano</p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <select 
-              value={selectedYear} 
-              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className="h-10 px-3 bg-card border border-border rounded-md text-foreground text-sm"
-            >
-              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
-                <option key={year} value={year}>{year}</option>
-              ))}
-            </select>
-          </div>
         </div>
 
-        <ResponsiveContainer width="100%" height={window.innerWidth < 640 ? 250 : 300}>
-          <LineChart data={monthlyData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
-            <XAxis 
-              dataKey="month" 
-              stroke="hsl(var(--muted-foreground))"
-              style={{ fontSize: window.innerWidth < 640 ? '10px' : '12px' }}
-            />
-            <YAxis 
-              stroke="hsl(var(--muted-foreground))"
-              style={{ fontSize: window.innerWidth < 640 ? '10px' : '12px' }}
-            />
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: 'hsl(var(--card))', 
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '8px',
-                fontSize: window.innerWidth < 640 ? '12px' : '14px'
-              }}
-              formatter={(value: any) => `R$ ${parseFloat(value).toFixed(2)}`}
-            />
-            <Legend wrapperStyle={{ fontSize: window.innerWidth < 640 ? '12px' : '14px' }} />
-            <Line 
-              type="monotone" 
-              dataKey="total" 
-              stroke="hsl(var(--primary))" 
-              strokeWidth={3}
-              name="Total"
-              dot={{ r: 4 }}
-              connectNulls
-            />
-            {peopleMonthlyData.map((person, index) => (
-              <Line 
-                key={person.name}
-                type="monotone" 
-                dataKey={person.name} 
-                stroke={person.color || COLORS[index % COLORS.length]}
-                strokeWidth={2}
-                strokeDasharray="5 5"
-                name={person.name}
-                dot={{ r: 3 }}
-                connectNulls
-              />
-            ))}
-          </LineChart>
-        </ResponsiveContainer>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <TabsList className="grid w-full sm:w-auto grid-cols-2">
+              <TabsTrigger value="total">Total</TabsTrigger>
+              <TabsTrigger value="categoria">Por Categoria</TabsTrigger>
+            </TabsList>
+
+            <div className="flex flex-wrap gap-2">
+              {activeTab === 'total' && (
+                <select 
+                  value={selectedYear} 
+                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                  className="h-9 px-3 bg-card border border-border rounded-md text-foreground text-sm"
+                >
+                  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              )}
+
+              {activeTab === 'categoria' && (
+                <>
+                  <select 
+                    value={selectedCategory} 
+                    onChange={(e) => {
+                      setSelectedCategory(e.target.value);
+                      setSelectedSubcategory('all');
+                    }}
+                    className="h-9 px-3 bg-card border border-border rounded-md text-foreground text-sm min-w-[150px]"
+                  >
+                    <option value="">Selecione uma Categoria</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+
+                  {selectedCategory && getSubcategoriesForCategory(selectedCategory).length > 0 && (
+                    <select 
+                      value={selectedSubcategory} 
+                      onChange={(e) => setSelectedSubcategory(e.target.value)}
+                      className="h-9 px-3 bg-card border border-border rounded-md text-foreground text-sm min-w-[150px]"
+                    >
+                      <option value="all">Todas Subcategorias</option>
+                      {getSubcategoriesForCategory(selectedCategory).map(sub => (
+                        <option key={sub.id} value={sub.id}>{sub.name}</option>
+                      ))}
+                    </select>
+                  )}
+
+                  <select 
+                    value={categoryYear} 
+                    onChange={(e) => setCategoryYear(parseInt(e.target.value))}
+                    className="h-9 px-3 bg-card border border-border rounded-md text-foreground text-sm"
+                  >
+                    {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+                </>
+              )}
+            </div>
+          </div>
+
+          <TabsContent value="total" className="mt-0">
+            <ResponsiveContainer width="100%" height={window.innerWidth < 640 ? 250 : 300}>
+              <LineChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
+                <XAxis 
+                  dataKey="month" 
+                  stroke="hsl(var(--muted-foreground))"
+                  style={{ fontSize: window.innerWidth < 640 ? '10px' : '12px' }}
+                />
+                <YAxis 
+                  stroke="hsl(var(--muted-foreground))"
+                  style={{ fontSize: window.innerWidth < 640 ? '10px' : '12px' }}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--card))', 
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px',
+                    fontSize: window.innerWidth < 640 ? '12px' : '14px'
+                  }}
+                  formatter={(value: any) => `R$ ${parseFloat(value).toFixed(2)}`}
+                />
+                <Legend wrapperStyle={{ fontSize: window.innerWidth < 640 ? '12px' : '14px' }} />
+                <Line 
+                  type="monotone" 
+                  dataKey="total" 
+                  stroke="hsl(var(--primary))" 
+                  strokeWidth={3}
+                  name="Total"
+                  dot={{ r: 4 }}
+                  connectNulls
+                />
+                {peopleMonthlyData.map((person, index) => (
+                  <Line 
+                    key={person.name}
+                    type="monotone" 
+                    dataKey={person.name} 
+                    stroke={person.color || COLORS[index % COLORS.length]}
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    name={person.name}
+                    dot={{ r: 3 }}
+                    connectNulls
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </TabsContent>
+
+          <TabsContent value="categoria" className="mt-0">
+            {!selectedCategory ? (
+              <div className="h-60 sm:h-80 flex items-center justify-center bg-muted/30 rounded-xl">
+                <p className="text-muted-foreground text-sm">Selecione uma categoria para visualizar</p>
+              </div>
+            ) : singleCategoryData.length === 0 ? (
+              <div className="h-60 sm:h-80 flex items-center justify-center bg-muted/30 rounded-xl">
+                <p className="text-muted-foreground text-sm">Nenhum gasto no período selecionado</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={window.innerWidth < 640 ? 250 : 300}>
+                <LineChart data={singleCategoryData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
+                  <XAxis 
+                    dataKey="month" 
+                    stroke="hsl(var(--muted-foreground))"
+                    style={{ fontSize: window.innerWidth < 640 ? '10px' : '12px' }}
+                  />
+                  <YAxis 
+                    stroke="hsl(var(--muted-foreground))"
+                    style={{ fontSize: window.innerWidth < 640 ? '10px' : '12px' }}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))', 
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                      fontSize: window.innerWidth < 640 ? '12px' : '14px'
+                    }}
+                    formatter={(value: any) => `R$ ${parseFloat(value).toFixed(2)}`}
+                  />
+                  <Legend wrapperStyle={{ fontSize: window.innerWidth < 640 ? '12px' : '14px' }} />
+                  <Line 
+                    type="monotone" 
+                    dataKey="total" 
+                    stroke="hsl(var(--primary))" 
+                    strokeWidth={3}
+                    name="Total"
+                    dot={{ r: 4 }}
+                    connectNulls
+                  />
+                  {peopleMonthlyData.map((person, index) => (
+                    <Line 
+                      key={person.name}
+                      type="monotone" 
+                      dataKey={person.name} 
+                      stroke={person.color || COLORS[index % COLORS.length]}
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      name={person.name}
+                      dot={{ r: 3 }}
+                      connectNulls
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </TabsContent>
+        </Tabs>
       </Card>
 
       {/* Distribuição por Categoria - Mês/Ano específico */}
@@ -408,117 +524,6 @@ const ChartsSection = () => {
               </ResponsiveContainer>
             </div>
           </div>
-        )}
-      </Card>
-
-      {/* Evolução de Categoria Específica */}
-      <Card className="p-4 sm:p-6 shadow-lg gradient-card">
-        <div className="flex flex-col gap-4 mb-4 sm:mb-6">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 gradient-primary rounded-lg sm:rounded-xl flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg sm:text-2xl font-bold text-foreground">Evolução por Categoria</h2>
-              <p className="text-xs sm:text-sm text-muted-foreground">Total e participantes ao longo do ano</p>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
-            <select 
-              value={selectedCategory} 
-              onChange={(e) => {
-                setSelectedCategory(e.target.value);
-                setSelectedSubcategory('all');
-              }}
-              className="h-9 px-3 bg-card border border-border rounded-md text-foreground text-sm min-w-[150px]"
-            >
-              <option value="">Selecione uma Categoria</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
-
-            {selectedCategory && getSubcategoriesForCategory(selectedCategory).length > 0 && (
-              <select 
-                value={selectedSubcategory} 
-                onChange={(e) => setSelectedSubcategory(e.target.value)}
-                className="h-9 px-3 bg-card border border-border rounded-md text-foreground text-sm min-w-[150px]"
-              >
-                <option value="all">Todas Subcategorias</option>
-                {getSubcategoriesForCategory(selectedCategory).map(sub => (
-                  <option key={sub.id} value={sub.id}>{sub.name}</option>
-                ))}
-              </select>
-            )}
-
-            <select 
-              value={categoryYear} 
-              onChange={(e) => setCategoryYear(parseInt(e.target.value))}
-              className="h-9 px-3 bg-card border border-border rounded-md text-foreground text-sm"
-            >
-              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
-                <option key={year} value={year}>{year}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {!selectedCategory ? (
-          <div className="h-60 sm:h-80 flex items-center justify-center bg-muted/30 rounded-xl">
-            <p className="text-muted-foreground text-sm">Selecione uma categoria para visualizar</p>
-          </div>
-        ) : singleCategoryData.length === 0 ? (
-          <div className="h-60 sm:h-80 flex items-center justify-center bg-muted/30 rounded-xl">
-            <p className="text-muted-foreground text-sm">Nenhum gasto no período selecionado</p>
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height={window.innerWidth < 640 ? 250 : 300}>
-            <LineChart data={singleCategoryData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
-              <XAxis 
-                dataKey="month" 
-                stroke="hsl(var(--muted-foreground))"
-                style={{ fontSize: window.innerWidth < 640 ? '10px' : '12px' }}
-              />
-              <YAxis 
-                stroke="hsl(var(--muted-foreground))"
-                style={{ fontSize: window.innerWidth < 640 ? '10px' : '12px' }}
-              />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: 'hsl(var(--card))', 
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '8px',
-                  fontSize: window.innerWidth < 640 ? '12px' : '14px'
-                }}
-                formatter={(value: any) => `R$ ${parseFloat(value).toFixed(2)}`}
-              />
-              <Legend wrapperStyle={{ fontSize: window.innerWidth < 640 ? '12px' : '14px' }} />
-              <Line 
-                type="monotone" 
-                dataKey="total" 
-                stroke="hsl(var(--primary))" 
-                strokeWidth={3}
-                name="Total"
-                dot={{ r: 4 }}
-                connectNulls
-              />
-              {peopleMonthlyData.map((person, index) => (
-                <Line 
-                  key={person.name}
-                  type="monotone" 
-                  dataKey={person.name} 
-                  stroke={person.color || COLORS[index % COLORS.length]}
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  name={person.name}
-                  dot={{ r: 3 }}
-                  connectNulls
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
         )}
       </Card>
     </div>
