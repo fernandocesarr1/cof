@@ -6,10 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, DollarSign, Calendar, FileText, User, Tag, Settings } from "lucide-react";
+import { PlusCircle, DollarSign, Calendar, FileText, User, Tag, Settings, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-logger";
 import * as LucideIcons from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ExpenseFormProps {
   onManageCategories: () => void;
@@ -22,7 +23,6 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
   const [categories, setCategories] = useState<any[]>([]);
   const [subcategories, setSubcategories] = useState<any[]>([]);
   const [people, setPeople] = useState<any[]>([]);
-  const [tipoGasto, setTipoGasto] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [subcategoryId, setSubcategoryId] = useState("");
   const [personId, setPersonId] = useState("");
@@ -30,11 +30,7 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
   const [data, setData] = useState(new Date().toISOString().split('T')[0]);
   const [descricao, setDescricao] = useState("");
   const [loading, setLoading] = useState(false);
-
-  // Filtrar categorias baseado no tipo de gasto selecionado
-  const categoriasFiltradas = tipoGasto 
-    ? categories.filter(cat => cat.tipo === tipoGasto)
-    : [];
+  const [duplicateWarning, setDuplicateWarning] = useState(false);
   
   // Filtrar subcategorias baseado na categoria selecionada
   const subcategoriasFiltradas = categoryId
@@ -46,6 +42,11 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
     loadPeople();
     loadSubcategories();
   }, []);
+
+  // Verificar duplicados quando os campos principais mudam
+  useEffect(() => {
+    checkDuplicates();
+  }, [valor, data, personId, descricao]);
 
   const loadCategories = async () => {
     const { data, error } = await supabase
@@ -92,13 +93,31 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
     }
   };
 
+  const checkDuplicates = async () => {
+    if (!valor || !data || !personId || !descricao) {
+      setDuplicateWarning(false);
+      return;
+    }
+
+    const { data: existing } = await supabase
+      .from('expenses')
+      .select('id')
+      .eq('amount', parseFloat(valor))
+      .eq('date', data)
+      .eq('person_id', personId)
+      .eq('description', descricao)
+      .limit(1);
+
+    setDuplicateWarning(existing && existing.length > 0);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!valor || !categoryId || !descricao || !personId) {
+    if (!valor || !personId || !descricao || !data) {
       toast({
         title: "Campos obrigatórios",
-        description: "Preencha todos os campos para adicionar um gasto.",
+        description: "Preencha valor, data, pessoa e descrição.",
         variant: "destructive",
       });
       return;
@@ -110,7 +129,7 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
       .insert({
         description: descricao,
         amount: parseFloat(valor),
-        category_id: categoryId,
+        category_id: categoryId || null,
         subcategory_id: subcategoryId || null,
         person_id: personId,
         date: data
@@ -138,18 +157,18 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
 
       // Limpar formulário
       setValor("");
-      setTipoGasto("");
       setCategoryId("");
       setSubcategoryId("");
       setPersonId("");
       setDescricao("");
+      setDuplicateWarning(false);
       
       // Notificar componente pai
       onExpenseAdded?.();
       
       toast({
         title: "Gasto adicionado! 🎉",
-        description: `R$ ${parseFloat(valor).toFixed(2)} em ${selectedCategory?.name}`,
+        description: `R$ ${parseFloat(valor).toFixed(2)}${selectedCategory ? ` em ${selectedCategory.name}` : ''}`,
       });
     }
   };
@@ -172,12 +191,57 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
           </div>
         </div>
 
+        {duplicateWarning && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Atenção: Pode haver duplicação! Já existe um gasto com os mesmos dados.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
           <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
+            {/* Valor - Primeiro */}
+            <div className="space-y-2">
+              <Label htmlFor="valor" className="flex items-center gap-2">
+                <DollarSign className="w-4 h-4" />
+                Valor (R$) *
+              </Label>
+              <Input
+                id="valor"
+                type="number"
+                step="0.01"
+                min="0"
+                value={valor}
+                onChange={(e) => setValor(e.target.value)}
+                placeholder="0,00"
+                className="h-11"
+                required
+              />
+            </div>
+
+            {/* Data - Segundo */}
+            <div className="space-y-2">
+              <Label htmlFor="data" className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Data *
+              </Label>
+              <Input
+                id="data"
+                type="date"
+                value={data}
+                onChange={(e) => setData(e.target.value)}
+                className="h-11"
+                required
+              />
+            </div>
+
+            {/* Pessoa - Terceiro */}
             <div className="space-y-2">
               <Label htmlFor="pessoa" className="flex items-center gap-2">
                 <User className="w-4 h-4" />
-                Pessoa
+                Pessoa *
               </Label>
               <Select value={personId} onValueChange={setPersonId}>
                 <SelectTrigger id="pessoa" className="h-11 bg-background">
@@ -193,46 +257,41 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
               </Select>
             </div>
 
+            {/* Descrição - Quarto (em uma linha só no mobile, ocupando o espaço) */}
             <div className="space-y-2">
-              <Label htmlFor="tipo-gasto" className="flex items-center gap-2">
-                <Tag className="w-4 h-4" />
-                Tipo de Gasto
+              <Label htmlFor="descricao" className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Descrição *
               </Label>
-              <Select 
-                value={tipoGasto} 
-                onValueChange={(value) => {
-                  setTipoGasto(value);
-                  setCategoryId("");
-                }}
-              >
-                <SelectTrigger id="tipo-gasto" className="h-11 bg-background">
-                  <SelectValue placeholder="Selecione o tipo..." />
-                </SelectTrigger>
-                <SelectContent className="bg-background border z-50">
-                  <SelectItem value="fixo">Gastos Fixos</SelectItem>
-                  <SelectItem value="variavel">Gastos Variáveis</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="descricao"
+                value={descricao}
+                onChange={(e) => setDescricao(e.target.value)}
+                placeholder="Detalhes do gasto..."
+                className="h-11"
+                required
+              />
             </div>
 
+            {/* Categoria - Opcional */}
             <div className="space-y-2">
               <Label htmlFor="categoria" className="flex items-center gap-2">
                 <Tag className="w-4 h-4" />
-                Categoria
+                Categoria (opcional)
               </Label>
               <Select 
                 value={categoryId} 
                 onValueChange={(value) => {
-                  setCategoryId(value);
+                  setCategoryId(value === "none" ? "" : value);
                   setSubcategoryId("");
                 }}
-                disabled={!tipoGasto}
               >
                 <SelectTrigger id="categoria" className="h-11 bg-background">
-                  <SelectValue placeholder={tipoGasto ? "Selecione a categoria..." : "Selecione o tipo primeiro"} />
+                  <SelectValue placeholder="Selecione a categoria..." />
                 </SelectTrigger>
                 <SelectContent className="bg-background border z-50">
-                  {categoriasFiltradas.map((cat) => {
+                  <SelectItem value="none">Nenhuma</SelectItem>
+                  {categories.map((cat) => {
                     const IconComponent = getIconComponent(cat.icon);
                     return (
                       <SelectItem key={cat.id} value={cat.id}>
@@ -244,6 +303,9 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
                             <IconComponent className="w-3.5 h-3.5 text-white" />
                           </div>
                           {cat.name}
+                          <span className="text-xs text-muted-foreground">
+                            ({cat.tipo === 'fixo' ? 'Fixo' : 'Variável'})
+                          </span>
                         </div>
                       </SelectItem>
                     );
@@ -252,6 +314,7 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
               </Select>
             </div>
 
+            {/* Subcategoria - Opcional */}
             <div className="space-y-2">
               <Label htmlFor="subcategoria" className="flex items-center gap-2">
                 <Tag className="w-4 h-4" />
@@ -263,7 +326,7 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
                 disabled={!categoryId}
               >
                 <SelectTrigger id="subcategoria" className="h-11 bg-background">
-                  <SelectValue placeholder={categoryId ? "Selecione a subcategoria..." : "Selecione a categoria primeiro"} />
+                  <SelectValue placeholder={categoryId ? "Selecione..." : "Selecione categoria primeiro"} />
                 </SelectTrigger>
                 <SelectContent className="bg-background border z-50">
                   <SelectItem value="none">Nenhuma</SelectItem>
@@ -274,51 +337,6 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="valor" className="flex items-center gap-2">
-                <DollarSign className="w-4 h-4" />
-                Valor (R$)
-              </Label>
-              <Input
-                id="valor"
-                type="number"
-                step="0.01"
-                min="0"
-                value={valor}
-                onChange={(e) => setValor(e.target.value)}
-                placeholder="0,00"
-                className="h-11"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="data" className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                Data
-              </Label>
-              <Input
-                id="data"
-                type="date"
-                value={data}
-                onChange={(e) => setData(e.target.value)}
-                className="h-11"
-              />
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="descricao" className="flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                Descrição
-              </Label>
-              <Textarea
-                id="descricao"
-                value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
-                placeholder="Adicione detalhes sobre este gasto..."
-                className="min-h-[100px] resize-none"
-              />
             </div>
           </div>
 
@@ -337,11 +355,11 @@ const ExpenseForm = ({ onManageCategories, onManagePeople, onExpenseAdded }: Exp
                 variant="outline" 
                 onClick={() => {
                   setValor("");
-                  setTipoGasto("");
                   setCategoryId("");
                   setSubcategoryId("");
                   setPersonId("");
                   setDescricao("");
+                  setDuplicateWarning(false);
                 }}
                 className="h-12"
               >
