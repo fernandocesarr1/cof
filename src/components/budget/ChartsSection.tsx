@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { TrendingUp, PieChart as PieChartIcon, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
@@ -113,9 +114,17 @@ const ChartsSection = () => {
   };
 
   const loadCategoryData = async () => {
-    // Todas as categorias do mês selecionado
-    const firstDay = new Date(categoryYear, categoryMonth, 1);
-    const lastDay = new Date(categoryYear, categoryMonth + 1, 0);
+    // Se categoryMonth for -1 (Total), buscar dados de todo o ano
+    let firstDay: Date;
+    let lastDay: Date;
+    
+    if (categoryMonth === -1) {
+      firstDay = new Date(categoryYear, 0, 1);
+      lastDay = new Date(categoryYear, 11, 31);
+    } else {
+      firstDay = new Date(categoryYear, categoryMonth, 1);
+      lastDay = new Date(categoryYear, categoryMonth + 1, 0);
+    }
     
     let query = supabase
       .from('expenses')
@@ -264,15 +273,19 @@ const ChartsSection = () => {
             </select>
           )}
 
-          <select 
-            value={selectedYear} 
-            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-            className="h-9 px-3 bg-card border border-border rounded-md text-foreground text-sm"
-          >
-            {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
-              <option key={year} value={year}>{year}</option>
-            ))}
-          </select>
+          <Input
+            type="number"
+            value={selectedYear}
+            onChange={(e) => {
+              const year = parseInt(e.target.value);
+              if (!isNaN(year) && year >= 1900 && year <= 2100) {
+                setSelectedYear(year);
+              }
+            }}
+            className="h-9 w-24"
+            min={1900}
+            max={2100}
+          />
         </div>
 
         {selectedCategory === 'all' ? (
@@ -385,7 +398,7 @@ const ChartsSection = () => {
             </div>
             <div>
               <h2 className="text-lg sm:text-2xl font-bold text-foreground">Distribuição por Categoria</h2>
-              <p className="text-xs sm:text-sm text-muted-foreground">Gastos do mês selecionado</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Gastos do período selecionado</p>
             </div>
           </div>
 
@@ -395,6 +408,7 @@ const ChartsSection = () => {
               selectedYear={categoryYear}
               onMonthChange={setCategoryMonth}
               onYearChange={setCategoryYear}
+              showAllMonths={true}
             />
             
             <select 

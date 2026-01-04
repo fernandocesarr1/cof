@@ -10,9 +10,11 @@ interface StatsOverviewProps {
   refreshTrigger?: number;
   selectedMonth: number;
   selectedYear: number;
+  gastosFixos?: number;
+  gastosVariaveis?: number;
 }
 
-const StatsOverview = ({ refreshTrigger, selectedMonth, selectedYear }: StatsOverviewProps) => {
+const StatsOverview = ({ refreshTrigger, selectedMonth, selectedYear, gastosFixos = 0, gastosVariaveis = 0 }: StatsOverviewProps) => {
   const [categories, setCategories] = useState<any[]>([]);
   const [subcategories, setSubcategories] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
@@ -133,147 +135,159 @@ const StatsOverview = ({ refreshTrigger, selectedMonth, selectedYear }: StatsOve
     );
   }
 
-  const renderCategorySection = (tipo: string, title: string, colorClass: string) => {
+  const renderCategorySection = (tipo: string, title: string, colorClass: string, totalValue: number) => {
     const filteredCategories = categories.filter(c => c.tipo === tipo);
     
-    if (filteredCategories.length === 0) {
-      return (
-        <p className="text-sm text-muted-foreground italic">
-          Nenhuma categoria {tipo} cadastrada
-        </p>
-      );
-    }
-
-    return filteredCategories.map((category) => {
-      const value = getCategoryValue(category.id);
-      const budget = getCategoryBudget(category.id);
-      const percentage = budget > 0 ? (value / budget) * 100 : 0;
-      const isEditing = editingBudget === category.id;
-      const categorySubcategories = getCategorySubcategories(category.id);
-      const hasSubcategories = categorySubcategories.length > 0;
-      const isExpanded = expandedCategories.has(category.id);
-
-      return (
-        <div key={category.id} className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-2">
-              {hasSubcategories && (
-                <button
-                  onClick={() => toggleCategory(category.id)}
-                  className="p-0.5 hover:bg-muted rounded"
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  )}
-                </button>
-              )}
-              <span className="font-medium text-foreground">{category.name}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className={`font-bold ${percentage >= 100 ? 'text-danger' : 'text-foreground'}`}>
-                R$ {value.toFixed(2)}
-              </span>
-              {budget > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  / R$ {budget.toFixed(2)}
-                </span>
-              )}
-              {isEditing ? (
-                <div className="flex items-center gap-1">
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={budgetValue}
-                    onChange={(e) => setBudgetValue(e.target.value)}
-                    className="h-7 w-24 text-xs"
-                    placeholder="Orçamento"
-                    autoFocus
-                  />
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7"
-                    onClick={() => handleSaveBudget(category.id)}
-                  >
-                    <Check className="w-3 h-3" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7"
-                    onClick={() => {
-                      setEditingBudget(null);
-                      setBudgetValue("");
-                    }}
-                  >
-                    <X className="w-3 h-3" />
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7"
-                  onClick={() => {
-                    setEditingBudget(category.id);
-                    setBudgetValue(budget > 0 ? budget.toString() : "");
-                  }}
-                >
-                  <Edit className="w-3 h-3" />
-                </Button>
-              )}
-            </div>
+    return (
+      <div className="space-y-3 sm:space-y-4">
+        <div className="flex items-center justify-between mb-3 sm:mb-4">
+          <div className="flex items-center gap-2">
+            <div className={`w-1 h-5 sm:h-6 ${colorClass} rounded-full`} />
+            <h3 className="text-sm sm:text-base font-semibold text-foreground">{title}</h3>
           </div>
-          <div className="h-2 bg-muted rounded-full overflow-hidden">
-            <div className="flex h-full">
-              {percentage <= 100 ? (
-                <div 
-                  className={`h-full ${getProgressColor(percentage)} rounded-full transition-all`}
-                  style={{ width: `${percentage}%` }}
-                />
-              ) : (
-                <>
-                  <div 
-                    className="h-full bg-success transition-all"
-                    style={{ width: `${(100 / percentage) * 100}%` }}
-                  />
-                  <div 
-                    className="h-full bg-danger transition-all"
-                    style={{ width: `${((percentage - 100) / percentage) * 100}%` }}
-                  />
-                </>
-              )}
-            </div>
-          </div>
-          {percentage >= 100 && (
-            <p className="text-xs text-danger">
-              Excedeu em R$ {(value - budget).toFixed(2)}
-            </p>
-          )}
-          
-          {/* Subcategorias expandíveis */}
-          {hasSubcategories && isExpanded && (
-            <div className="ml-6 mt-2 space-y-2 border-l-2 border-muted pl-3">
-              {categorySubcategories.map((sub) => {
-                const subValue = getSubcategoryValue(sub.id);
-                if (subValue === 0) return null;
-                return (
-                  <div key={sub.id} className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">{sub.name}</span>
-                    <span className="font-medium text-foreground">R$ {subValue.toFixed(2)}</span>
-                  </div>
-                );
-              })}
-              {categorySubcategories.every(sub => getSubcategoryValue(sub.id) === 0) && (
-                <p className="text-xs text-muted-foreground italic">Sem gastos nas subcategorias</p>
-              )}
-            </div>
-          )}
+          <span className="text-sm sm:text-base font-bold text-foreground">
+            R$ {totalValue.toFixed(2)}
+          </span>
         </div>
-      );
-    });
+        
+        {filteredCategories.length === 0 ? (
+          <p className="text-sm text-muted-foreground italic">
+            Nenhuma categoria {tipo} cadastrada
+          </p>
+        ) : (
+          filteredCategories.map((category) => {
+            const value = getCategoryValue(category.id);
+            const budget = getCategoryBudget(category.id);
+            const percentage = budget > 0 ? (value / budget) * 100 : 0;
+            const isEditing = editingBudget === category.id;
+            const categorySubcategories = getCategorySubcategories(category.id);
+            const hasSubcategories = categorySubcategories.length > 0;
+            const isExpanded = expandedCategories.has(category.id);
+
+            return (
+              <div key={category.id} className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    {hasSubcategories && (
+                      <button
+                        onClick={() => toggleCategory(category.id)}
+                        className="p-0.5 hover:bg-muted rounded"
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </button>
+                    )}
+                    <span className="font-medium text-foreground">{category.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`font-bold ${percentage >= 100 ? 'text-danger' : 'text-foreground'}`}>
+                      R$ {value.toFixed(2)}
+                    </span>
+                    {budget > 0 && (
+                      <span className="text-xs text-muted-foreground">
+                        / R$ {budget.toFixed(2)}
+                      </span>
+                    )}
+                    {isEditing ? (
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={budgetValue}
+                          onChange={(e) => setBudgetValue(e.target.value)}
+                          className="h-7 w-24 text-xs"
+                          placeholder="Orçamento"
+                          autoFocus
+                        />
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          onClick={() => handleSaveBudget(category.id)}
+                        >
+                          <Check className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          onClick={() => {
+                            setEditingBudget(null);
+                            setBudgetValue("");
+                          }}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7"
+                        onClick={() => {
+                          setEditingBudget(category.id);
+                          setBudgetValue(budget > 0 ? budget.toString() : "");
+                        }}
+                      >
+                        <Edit className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div className="flex h-full">
+                    {percentage <= 100 ? (
+                      <div 
+                        className={`h-full ${getProgressColor(percentage)} rounded-full transition-all`}
+                        style={{ width: `${percentage}%` }}
+                      />
+                    ) : (
+                      <>
+                        <div 
+                          className="h-full bg-success transition-all"
+                          style={{ width: `${(100 / percentage) * 100}%` }}
+                        />
+                        <div 
+                          className="h-full bg-danger transition-all"
+                          style={{ width: `${((percentage - 100) / percentage) * 100}%` }}
+                        />
+                      </>
+                    )}
+                  </div>
+                </div>
+                {percentage >= 100 && (
+                  <p className="text-xs text-danger">
+                    Excedeu em R$ {(value - budget).toFixed(2)}
+                  </p>
+                )}
+                
+                {/* Subcategorias expandíveis */}
+                {hasSubcategories && isExpanded && (
+                  <div className="ml-6 mt-2 space-y-2 border-l-2 border-muted pl-3">
+                    {categorySubcategories.map((sub) => {
+                      const subValue = getSubcategoryValue(sub.id);
+                      if (subValue === 0) return null;
+                      return (
+                        <div key={sub.id} className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">{sub.name}</span>
+                          <span className="font-medium text-foreground">R$ {subValue.toFixed(2)}</span>
+                        </div>
+                      );
+                    })}
+                    {categorySubcategories.every(sub => getSubcategoryValue(sub.id) === 0) && (
+                      <p className="text-xs text-muted-foreground italic">Sem gastos nas subcategorias</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+    );
   };
 
   return (
@@ -284,22 +298,10 @@ const StatsOverview = ({ refreshTrigger, selectedMonth, selectedYear }: StatsOve
       
       <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
         {/* Gastos Fixos */}
-        <div className="space-y-3 sm:space-y-4">
-          <div className="flex items-center gap-2 mb-3 sm:mb-4">
-            <div className="w-1 h-5 sm:h-6 bg-success rounded-full" />
-            <h3 className="text-sm sm:text-base font-semibold text-foreground">Gastos Fixos</h3>
-          </div>
-          {renderCategorySection("fixo", "Gastos Fixos", "bg-success")}
-        </div>
+        {renderCategorySection("fixo", "Gastos Fixos", "bg-success", gastosFixos)}
 
         {/* Gastos Variáveis */}
-        <div className="space-y-3 sm:space-y-4">
-          <div className="flex items-center gap-2 mb-3 sm:mb-4">
-            <div className="w-1 h-5 sm:h-6 bg-warning rounded-full" />
-            <h3 className="text-sm sm:text-base font-semibold text-foreground">Gastos Variáveis</h3>
-          </div>
-          {renderCategorySection("variavel", "Gastos Variáveis", "bg-warning")}
-        </div>
+        {renderCategorySection("variavel", "Gastos Variáveis", "bg-warning", gastosVariaveis)}
       </div>
     </Card>
   );

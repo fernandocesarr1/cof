@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   LayoutDashboard, 
@@ -12,9 +11,9 @@ import {
   Wallet,
   CalendarDays,
   Users,
-  Download,
   Bell
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import ExpenseForm from "./ExpenseForm";
 import ExpenseList from "./ExpenseList";
 import StatsOverview from "./StatsOverview";
@@ -149,6 +148,27 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
     setRefreshTrigger(prev => prev + 1);
   };
 
+  const getDiferencaMes = () => {
+    if (peopleData.length === 2) {
+      return Math.abs(peopleData[0].value - peopleData[1].value);
+    }
+    return 0;
+  };
+
+  const getDiferencaAno = () => {
+    if (peopleDataYear.length === 2) {
+      return Math.abs(peopleDataYear[0].value - peopleDataYear[1].value);
+    }
+    return 0;
+  };
+
+  const getQuemGastouMenos = (data: any[]) => {
+    if (data.length === 2 && data[0].value !== data[1].value) {
+      return data[0].value < data[1].value ? data[0].name : data[1].name;
+    }
+    return null;
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -232,7 +252,34 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
               />
             </div>
             
-            <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2">
+              {/* Total do Mês + Diferença do Mês */}
+              <Card className="p-4 sm:p-6 gradient-card border-none shadow-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">Total do Mês</p>
+                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                </div>
+                <p className="text-xl sm:text-3xl font-bold text-foreground">R$ {totalMes.toFixed(2)}</p>
+                
+                <div className="mt-4 pt-3 border-t border-border">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                      <Users className="w-3 h-3 sm:w-4 sm:h-4" />
+                      Diferença
+                    </p>
+                    <p className="text-sm sm:text-lg font-bold text-foreground">
+                      R$ {getDiferencaMes().toFixed(2)}
+                    </p>
+                  </div>
+                  {getQuemGastouMenos(peopleData) && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {getQuemGastouMenos(peopleData)} gastou menos
+                    </p>
+                  )}
+                </div>
+              </Card>
+
+              {/* Total do Ano + Diferença do Ano */}
               <Card className="p-4 sm:p-6 gradient-card border-none shadow-lg">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs sm:text-sm font-medium text-muted-foreground">Total do Ano</p>
@@ -240,71 +287,23 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
                 </div>
                 <p className="text-xl sm:text-3xl font-bold text-foreground">R$ {totalAno.toFixed(2)}</p>
                 <p className="text-xs text-muted-foreground mt-1">Acumulado {selectedYear}</p>
-              </Card>
-
-              <Card className="p-4 sm:p-6 gradient-card border-none shadow-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">Total do Mês</p>
-                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                
+                <div className="mt-4 pt-3 border-t border-border">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1">
+                      <Users className="w-3 h-3 sm:w-4 sm:h-4" />
+                      Diferença
+                    </p>
+                    <p className="text-sm sm:text-lg font-bold text-foreground">
+                      R$ {getDiferencaAno().toFixed(2)}
+                    </p>
+                  </div>
+                  {getQuemGastouMenos(peopleDataYear) && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {getQuemGastouMenos(peopleDataYear)} gastou menos
+                    </p>
+                  )}
                 </div>
-                <p className="text-xl sm:text-3xl font-bold text-foreground">R$ {totalMes.toFixed(2)}</p>
-                <p className="text-xs text-muted-foreground mt-1">Acumulado</p>
-              </Card>
-
-              <Card className="p-4 sm:p-6 gradient-card border-none shadow-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">Gastos Fixos</p>
-                  <CalendarDays className="w-4 h-4 sm:w-5 sm:h-5 text-success" />
-                </div>
-                <p className="text-xl sm:text-3xl font-bold text-foreground">R$ {gastosFixos.toFixed(2)}</p>
-                <p className="text-xs text-muted-foreground mt-1">Mês atual</p>
-              </Card>
-
-              <Card className="p-4 sm:p-6 gradient-card border-none shadow-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">Gastos Variáveis</p>
-                  <PieChart className="w-4 h-4 sm:w-5 sm:h-5 text-warning" />
-                </div>
-                <p className="text-xl sm:text-3xl font-bold text-foreground">R$ {gastosVariaveis.toFixed(2)}</p>
-                <p className="text-xs text-muted-foreground mt-1">Mês atual</p>
-              </Card>
-
-              <Card className="p-4 sm:p-6 gradient-card border-none shadow-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">Diferença Mês</p>
-                  <Users className="w-4 h-4 sm:w-5 sm:h-5 text-secondary" />
-                </div>
-                <p className="text-xl sm:text-3xl font-bold text-foreground">
-                  {peopleData.length === 2 
-                    ? `R$ ${Math.abs(peopleData[0].value - peopleData[1].value).toFixed(2)}`
-                    : 'R$ 0,00'
-                  }
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {peopleData.length === 2 && peopleData[0].value !== peopleData[1].value
-                    ? `${peopleData[0].value < peopleData[1].value ? peopleData[0].name : peopleData[1].name} gastou menos`
-                    : 'Gastos iguais'
-                  }
-                </p>
-              </Card>
-
-              <Card className="p-4 sm:p-6 gradient-card border-none shadow-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">Diferença Ano</p>
-                  <Users className="w-4 h-4 sm:w-5 sm:h-5 text-secondary" />
-                </div>
-                <p className="text-xl sm:text-3xl font-bold text-foreground">
-                  {peopleDataYear.length === 2 
-                    ? `R$ ${Math.abs(peopleDataYear[0].value - peopleDataYear[1].value).toFixed(2)}`
-                    : 'R$ 0,00'
-                  }
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {peopleDataYear.length === 2 && peopleDataYear[0].value !== peopleDataYear[1].value
-                    ? `${peopleDataYear[0].value < peopleDataYear[1].value ? peopleDataYear[0].name : peopleDataYear[1].name} gastou menos`
-                    : 'Gastos iguais'
-                  }
-                </p>
               </Card>
             </div>
 
@@ -312,6 +311,8 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
               refreshTrigger={refreshTrigger} 
               selectedMonth={selectedMonth}
               selectedYear={selectedYear}
+              gastosFixos={gastosFixos}
+              gastosVariaveis={gastosVariaveis}
             />
           </TabsContent>
 
