@@ -11,7 +11,8 @@ import {
   Wallet,
   CalendarDays,
   Users,
-  Bell
+  Bell,
+  ClipboardList
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ExpenseForm from "./ExpenseForm";
@@ -22,6 +23,7 @@ import CategorySubcategoryManager from "./CategorySubcategoryManager";
 import Notifications from "./Notifications";
 import SettingsComponent from "./Settings";
 import MonthYearSelector from "./MonthYearSelector";
+import PlannedExpenses from "./PlannedExpenses";
 
 import { supabase } from "@/integrations/supabase/client";
 
@@ -202,7 +204,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
       <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
           <div className="flex justify-center overflow-x-auto pb-2">
-            <TabsList className="grid grid-cols-6 lg:inline-grid bg-card shadow-md">
+            <TabsList className="grid grid-cols-7 lg:inline-grid bg-card shadow-md">
               <TabsTrigger value="add" className="gap-1 sm:gap-2 text-xs sm:text-sm">
                 <PlusCircle className="w-4 h-4" />
                 <span className="hidden sm:inline">Adicionar</span>
@@ -210,6 +212,10 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
               <TabsTrigger value="dashboard" className="gap-1 sm:gap-2 text-xs sm:text-sm">
                 <LayoutDashboard className="w-4 h-4" />
                 <span className="hidden sm:inline">Dashboard</span>
+              </TabsTrigger>
+              <TabsTrigger value="planned" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+                <ClipboardList className="w-4 h-4" />
+                <span className="hidden sm:inline">Previstos</span>
               </TabsTrigger>
               <TabsTrigger value="charts" className="gap-1 sm:gap-2 text-xs sm:text-sm">
                 <PieChart className="w-4 h-4" />
@@ -314,6 +320,10 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
               gastosFixos={gastosFixos}
               gastosVariaveis={gastosVariaveis}
             />
+          </TabsContent>
+
+          <TabsContent value="planned" className="animate-fade-in">
+            <PlannedExpenses />
           </TabsContent>
 
           <TabsContent value="expenses" className="animate-fade-in">
