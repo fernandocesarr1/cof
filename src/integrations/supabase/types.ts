@@ -193,6 +193,82 @@ export type Database = {
         }
         Relationships: []
       }
+      planned_expense_payments: {
+        Row: {
+          created_at: string
+          id: string
+          month: number
+          paid: boolean
+          paid_at: string | null
+          planned_expense_id: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          month: number
+          paid?: boolean
+          paid_at?: string | null
+          planned_expense_id: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          month?: number
+          paid?: boolean
+          paid_at?: string | null
+          planned_expense_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planned_expense_payments_planned_expense_id_fkey"
+            columns: ["planned_expense_id"]
+            isOneToOne: false
+            referencedRelation: "planned_expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planned_expenses: {
+        Row: {
+          active: boolean
+          amount: number
+          category_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          amount: number
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean
+          amount?: number
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planned_expenses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subcategories: {
         Row: {
           category_id: string
