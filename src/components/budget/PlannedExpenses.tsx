@@ -7,12 +7,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Plus, 
   Trash2, 
-  Check, 
-  X, 
   Edit2,
   ChevronLeft,
   ChevronRight,
-  Calendar
+  Calendar,
+  AlertTriangle
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -38,6 +37,7 @@ interface PlannedExpense {
   category_id: string | null;
   description: string | null;
   active: boolean;
+  due_day: number;
 }
 
 interface Category {
@@ -73,7 +73,8 @@ const PlannedExpenses = () => {
     name: "",
     amount: "",
     category_id: "",
-    description: ""
+    description: "",
+    due_day: "1"
   });
 
   useEffect(() => {
@@ -81,15 +82,15 @@ const PlannedExpenses = () => {
   }, [selectedMonth, selectedYear]);
 
   const loadData = async () => {
-    // Load planned expenses
+    // Load all active planned expenses (they repeat every month)
     const { data: expenses } = await supabase
       .from('planned_expenses')
       .select('*')
       .eq('active', true)
-      .order('name');
+      .order('due_day', { ascending: true });
     
     if (expenses) {
-      setPlannedExpenses(expenses);
+      setPlannedExpenses(expenses as PlannedExpense[]);
     }
 
     // Load categories
@@ -102,7 +103,7 @@ const PlannedExpenses = () => {
       setCategories(cats);
     }
 
-    // Load payments for current month/year
+    // Load payments for selected month/year
     const { data: pays } = await supabase
       .from('planned_expense_payments')
       .select('*')
@@ -110,7 +111,7 @@ const PlannedExpenses = () => {
       .eq('year', selectedYear);
     
     if (pays) {
-      setPayments(pays);
+      setPayments(pays as Payment[]);
     }
   };
 
@@ -124,11 +125,13 @@ const PlannedExpenses = () => {
       return;
     }
 
+    const dueDay = parseInt(formData.due_day) || 1;
     const expenseData = {
       name: formData.name,
       amount: parseFloat(formData.amount),
       category_id: formData.category_id || null,
-      description: formData.description || null
+      description: formData.description || null,
+      due_day: Math.min(Math.max(dueDay, 1), 31)
     };
 
     if (editingExpense) {
@@ -154,7 +157,7 @@ const PlannedExpenses = () => {
       toast({ title: "Gasto previsto criado!" });
     }
 
-    setFormData({ name: "", amount: "", category_id: "", description: "" });
+    setFormData({ name: "", amount: "", category_id: "", description: "", due_day: "1" });
     setEditingExpense(null);
     setIsDialogOpen(false);
     loadData();
@@ -180,7 +183,8 @@ const PlannedExpenses = () => {
       name: expense.name,
       amount: expense.amount.toString(),
       category_id: expense.category_id || "",
-      description: expense.description || ""
+      description: expense.description || "",
+      due_day: expense.due_day?.toString() || "1"
     });
     setIsDialogOpen(true);
   };
@@ -228,8 +232,32 @@ const PlannedExpenses = () => {
     return payment?.paid || false;
   };
 
+  const isExpenseOverdue = (expense: PlannedExpense) => {
+    if (isExpensePaid(expense.id)) return false;
+    
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+    
+    // Se estamos vendo um mês/ano passado e não está pago, está atrasado
+    if (selectedYear < currentYear || (selectedYear === currentYear && selectedMonth < currentMonth)) {
+      return true;
+    }
+    
+    // Se estamos no mês atual e passou do dia de vencimento
+    if (selectedYear === currentYear && selectedMonth === currentMonth) {
+      return today.getDate() > expense.due_day;
+    }
+    
+    return false;
+  };
+
   const getPaidCount = () => {
     return plannedExpenses.filter(e => isExpensePaid(e.id)).length;
+  };
+
+  const getOverdueCount = () => {
+    return plannedExpenses.filter(e => isExpenseOverdue(e)).length;
   };
 
   const getTotalExpected = () => {
@@ -239,6 +267,12 @@ const PlannedExpenses = () => {
   const getTotalPaid = () => {
     return plannedExpenses
       .filter(e => isExpensePaid(e.id))
+      .reduce((sum, e) => sum + e.amount, 0);
+  };
+
+  const getTotalOverdue = () => {
+    return plannedExpenses
+      .filter(e => isExpenseOverdue(e))
       .reduce((sum, e) => sum + e.amount, 0);
   };
 
@@ -262,6 +296,25 @@ const PlannedExpenses = () => {
     if (!categoryId) return null;
     return categories.find(c => c.id === categoryId)?.name;
   };
+
+  // Sort expenses: overdue first, then by due_day
+  const sortedExpenses = [...plannedExpenses].sort((a, b) => {
+    const aOverdue = isExpenseOverdue(a);
+    const bOverdue = isExpenseOverdue(b);
+    const aPaid = isExpensePaid(a.id);
+    const bPaid = isExpensePaid(b.id);
+    
+    // Paid ones go to the bottom
+    if (aPaid && !bPaid) return 1;
+    if (!aPaid && bPaid) return -1;
+    
+    // Overdue ones go to the top
+    if (aOverdue && !bOverdue) return -1;
+    if (!aOverdue && bOverdue) return 1;
+    
+    // Sort by due day
+    return a.due_day - b.due_day;
+  });
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -295,7 +348,7 @@ const PlannedExpenses = () => {
             setIsDialogOpen(open);
             if (!open) {
               setEditingExpense(null);
-              setFormData({ name: "", amount: "", category_id: "", description: "" });
+              setFormData({ name: "", amount: "", category_id: "", description: "", due_day: "1" });
             }
           }}>
             <DialogTrigger asChild>
@@ -320,16 +373,30 @@ const PlannedExpenses = () => {
                     placeholder="Ex: Netflix, Água, Luz..."
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="amount">Valor Previsto *</Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    step="0.01"
-                    value={formData.amount}
-                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                    placeholder="0,00"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="amount">Valor Previsto *</Label>
+                    <Input
+                      id="amount"
+                      type="number"
+                      step="0.01"
+                      value={formData.amount}
+                      onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                      placeholder="0,00"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="due_day">Dia do Vencimento</Label>
+                    <Input
+                      id="due_day"
+                      type="number"
+                      min="1"
+                      max="31"
+                      value={formData.due_day}
+                      onChange={(e) => setFormData({ ...formData, due_day: e.target.value })}
+                      placeholder="1"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="category">Categoria</Label>
@@ -368,7 +435,7 @@ const PlannedExpenses = () => {
       </Card>
 
       {/* Resumo */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <Card className="p-4">
           <p className="text-sm text-muted-foreground">Total Previsto</p>
           <p className="text-2xl font-bold text-foreground">
@@ -387,6 +454,17 @@ const PlannedExpenses = () => {
             {getPaidCount()} / {plannedExpenses.length}
           </p>
         </Card>
+        {getOverdueCount() > 0 && (
+          <Card className="p-4 bg-danger/10 border-danger/30">
+            <p className="text-sm text-danger flex items-center gap-1">
+              <AlertTriangle className="w-4 h-4" />
+              Atrasados
+            </p>
+            <p className="text-2xl font-bold text-danger">
+              {getOverdueCount()} - R$ {getTotalOverdue().toFixed(2)}
+            </p>
+          </Card>
+        )}
       </div>
 
       {/* Lista de gastos previstos */}
@@ -400,8 +478,9 @@ const PlannedExpenses = () => {
           </div>
         ) : (
           <div className="space-y-2">
-            {plannedExpenses.map((expense) => {
+            {sortedExpenses.map((expense) => {
               const isPaid = isExpensePaid(expense.id);
+              const isOverdue = isExpenseOverdue(expense);
               const categoryName = getCategoryName(expense.category_id);
               
               return (
@@ -410,20 +489,33 @@ const PlannedExpenses = () => {
                   className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
                     isPaid 
                       ? 'bg-success/10 border-success/30' 
-                      : 'bg-card border-border hover:bg-muted/50'
+                      : isOverdue
+                        ? 'bg-danger/10 border-danger/50 animate-pulse'
+                        : 'bg-card border-border hover:bg-muted/50'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <Checkbox
                       checked={isPaid}
                       onCheckedChange={() => togglePayment(expense.id, isPaid)}
-                      className="data-[state=checked]:bg-success data-[state=checked]:border-success"
+                      className={`${isPaid ? 'data-[state=checked]:bg-success data-[state=checked]:border-success' : ''} ${isOverdue ? 'border-danger' : ''}`}
                     />
                     <div>
-                      <p className={`font-medium ${isPaid ? 'line-through text-muted-foreground' : ''}`}>
-                        {expense.name}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className={`font-medium ${isPaid ? 'line-through text-muted-foreground' : ''} ${isOverdue ? 'text-danger' : ''}`}>
+                          {expense.name}
+                        </p>
+                        {isOverdue && (
+                          <span className="text-xs bg-danger text-white px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3" />
+                            Atrasado
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span className={`${isOverdue ? 'text-danger font-medium' : ''}`}>
+                          Vence dia {expense.due_day}
+                        </span>
                         {categoryName && (
                           <span className="bg-muted px-2 py-0.5 rounded">
                             {categoryName}
@@ -437,7 +529,7 @@ const PlannedExpenses = () => {
                   </div>
                   
                   <div className="flex items-center gap-3">
-                    <span className={`font-semibold ${isPaid ? 'text-success' : ''}`}>
+                    <span className={`font-semibold ${isPaid ? 'text-success' : ''} ${isOverdue ? 'text-danger' : ''}`}>
                       R$ {expense.amount.toFixed(2)}
                     </span>
                     <div className="flex items-center gap-1">
