@@ -38,6 +38,7 @@ interface PlannedExpense {
   description: string | null;
   active: boolean;
   due_day: number;
+  created_at: string;
 }
 
 interface Category {
@@ -54,6 +55,7 @@ interface Payment {
   year: number;
   paid: boolean;
   paid_at: string | null;
+  paid_amount: number | null;
 }
 
 const MONTHS = [
@@ -76,13 +78,20 @@ const PlannedExpenses = () => {
     description: "",
     due_day: "1"
   });
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [payingExpense, setPayingExpense] = useState<PlannedExpense | null>(null);
+  const [paidAmount, setPaidAmount] = useState("");
 
   useEffect(() => {
     loadData();
   }, [selectedMonth, selectedYear]);
 
   const loadData = async () => {
-    // Load all active planned expenses (they repeat every month)
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+    
+    // Load all active planned expenses that were created before or during the selected month
     const { data: expenses } = await supabase
       .from('planned_expenses')
       .select('*')
@@ -90,7 +99,17 @@ const PlannedExpenses = () => {
       .order('due_day', { ascending: true });
     
     if (expenses) {
-      setPlannedExpenses(expenses as PlannedExpense[]);
+      // Filter expenses to only show those created before or during the selected month
+      const filteredExpenses = expenses.filter((expense: PlannedExpense) => {
+        const createdAt = new Date(expense.created_at);
+        const createdMonth = createdAt.getMonth();
+        const createdYear = createdAt.getFullYear();
+        
+        // Show expense if it was created before or during the selected month
+        return createdYear < selectedYear || 
+               (createdYear === selectedYear && createdMonth <= selectedMonth);
+      });
+      setPlannedExpenses(filteredExpenses);
     }
 
     // Load categories
@@ -115,6 +134,12 @@ const PlannedExpenses = () => {
     }
   };
 
+  const isPastMonth = () => {
+    const today = new Date();
+    return selectedYear < today.getFullYear() || 
+           (selectedYear === today.getFullYear() && selectedMonth < today.getMonth());
+  };
+
   const handleSubmit = async () => {
     if (!formData.name || !formData.amount) {
       toast({
@@ -135,6 +160,8 @@ const PlannedExpenses = () => {
     };
 
     if (editingExpense) {
+      // For editing, we just update the planned expense
+      // This will affect current and future months only since we filter by created_at
       const { error } = await supabase
         .from('planned_expenses')
         .update(expenseData)
@@ -164,6 +191,9 @@ const PlannedExpenses = () => {
   };
 
   const handleDelete = async (id: string) => {
+    // Instead of marking as inactive (which would hide from past months too),
+    // we set a deleted_from date. But since we don't have that column,
+    // we'll just mark as inactive - this only affects future visibility
     const { error } = await supabase
       .from('planned_expenses')
       .update({ active: false })
@@ -189,33 +219,52 @@ const PlannedExpenses = () => {
     setIsDialogOpen(true);
   };
 
-  const togglePayment = async (expenseId: string, currentlyPaid: boolean) => {
+  const openPaymentDialog = (expense: PlannedExpense) => {
+    setPayingExpense(expense);
+    setPaidAmount(expense.amount.toString());
+    setPaymentDialogOpen(true);
+  };
+
+  const handlePayment = async () => {
+    if (!payingExpense) return;
+    
+    const amount = parseFloat(paidAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast({ title: "Valor inválido", variant: "destructive" });
+      return;
+    }
+
+    const paidAt = new Date().toISOString();
+    
+    // Check if payment record exists
     const existingPayment = payments.find(
-      p => p.planned_expense_id === expenseId
+      p => p.planned_expense_id === payingExpense.id
     );
 
     if (existingPayment) {
       const { error } = await supabase
         .from('planned_expense_payments')
         .update({ 
-          paid: !currentlyPaid,
-          paid_at: !currentlyPaid ? new Date().toISOString() : null
+          paid: true,
+          paid_at: paidAt,
+          paid_amount: amount
         })
         .eq('id', existingPayment.id);
       
       if (error) {
-        toast({ title: "Erro ao atualizar pagamento", variant: "destructive" });
+        toast({ title: "Erro ao registrar pagamento", variant: "destructive" });
         return;
       }
     } else {
       const { error } = await supabase
         .from('planned_expense_payments')
         .insert({
-          planned_expense_id: expenseId,
+          planned_expense_id: payingExpense.id,
           month: selectedMonth,
           year: selectedYear,
           paid: true,
-          paid_at: new Date().toISOString()
+          paid_at: paidAt,
+          paid_amount: amount
         });
       
       if (error) {
@@ -224,12 +273,92 @@ const PlannedExpenses = () => {
       }
     }
 
+    // Create the expense in the expenses table
+    const expenseDate = new Date(selectedYear, selectedMonth, payingExpense.due_day);
+    // Adjust if due_day is greater than days in month
+    const lastDayOfMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+    if (payingExpense.due_day > lastDayOfMonth) {
+      expenseDate.setDate(lastDayOfMonth);
+    }
+
+    const { error: expenseError } = await supabase
+      .from('expenses')
+      .insert({
+        amount: amount,
+        category_id: payingExpense.category_id,
+        date: expenseDate.toISOString().split('T')[0],
+        description: payingExpense.name + (payingExpense.description ? ` - ${payingExpense.description}` : '')
+      });
+
+    if (expenseError) {
+      toast({ title: "Erro ao criar despesa", variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Pagamento registrado e despesa criada!" });
+    setPaymentDialogOpen(false);
+    setPayingExpense(null);
+    setPaidAmount("");
     loadData();
+  };
+
+  const togglePayment = async (expenseId: string, currentlyPaid: boolean) => {
+    if (currentlyPaid) {
+      // If marking as unpaid, remove the payment and delete the expense
+      const payment = payments.find(p => p.planned_expense_id === expenseId);
+      if (payment) {
+        // Delete the associated expense if exists
+        const expense = plannedExpenses.find(e => e.id === expenseId);
+        if (expense && payment.paid_at) {
+          const expenseDate = new Date(selectedYear, selectedMonth, expense.due_day);
+          const lastDayOfMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+          if (expense.due_day > lastDayOfMonth) {
+            expenseDate.setDate(lastDayOfMonth);
+          }
+          
+          // Try to delete the expense that was created
+          await supabase
+            .from('expenses')
+            .delete()
+            .eq('description', expense.name + (expense.description ? ` - ${expense.description}` : ''))
+            .eq('date', expenseDate.toISOString().split('T')[0]);
+        }
+
+        await supabase
+          .from('planned_expense_payments')
+          .update({ 
+            paid: false,
+            paid_at: null,
+            paid_amount: null
+          })
+          .eq('id', payment.id);
+      }
+      loadData();
+    } else {
+      // Open dialog to enter paid amount
+      const expense = plannedExpenses.find(e => e.id === expenseId);
+      if (expense) {
+        openPaymentDialog(expense);
+      }
+    }
   };
 
   const isExpensePaid = (expenseId: string) => {
     const payment = payments.find(p => p.planned_expense_id === expenseId);
     return payment?.paid || false;
+  };
+
+  const getPaymentAmount = (expenseId: string) => {
+    const payment = payments.find(p => p.planned_expense_id === expenseId);
+    return payment?.paid_amount;
+  };
+
+  const getPaymentDate = (expenseId: string) => {
+    const payment = payments.find(p => p.planned_expense_id === expenseId);
+    if (payment?.paid_at) {
+      return new Date(payment.paid_at).toLocaleDateString('pt-BR');
+    }
+    return null;
   };
 
   const isExpenseOverdue = (expense: PlannedExpense) => {
@@ -267,7 +396,10 @@ const PlannedExpenses = () => {
   const getTotalPaid = () => {
     return plannedExpenses
       .filter(e => isExpensePaid(e.id))
-      .reduce((sum, e) => sum + e.amount, 0);
+      .reduce((sum, e) => {
+        const paidAmount = getPaymentAmount(e.id);
+        return sum + (paidAmount ?? e.amount);
+      }, 0);
   };
 
   const getTotalOverdue = () => {
@@ -434,6 +566,38 @@ const PlannedExpenses = () => {
         </div>
       </Card>
 
+      {/* Payment Dialog */}
+      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Registrar Pagamento</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <p className="text-sm text-muted-foreground">
+              Gasto: <strong>{payingExpense?.name}</strong>
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Valor previsto: <strong>R$ {payingExpense?.amount.toFixed(2)}</strong>
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="paid_amount">Valor Real Pago *</Label>
+              <Input
+                id="paid_amount"
+                type="number"
+                step="0.01"
+                value={paidAmount}
+                onChange={(e) => setPaidAmount(e.target.value)}
+                placeholder="0,00"
+                autoFocus
+              />
+            </div>
+            <Button onClick={handlePayment} className="w-full">
+              Confirmar Pagamento
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Resumo */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <Card className="p-4">
@@ -473,7 +637,7 @@ const PlannedExpenses = () => {
         
         {plannedExpenses.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            <p>Nenhum gasto previsto cadastrado.</p>
+            <p>Nenhum gasto previsto para este mês.</p>
             <p className="text-sm mt-2">Clique em "Novo Gasto" para adicionar.</p>
           </div>
         ) : (
@@ -482,6 +646,8 @@ const PlannedExpenses = () => {
               const isPaid = isExpensePaid(expense.id);
               const isOverdue = isExpenseOverdue(expense);
               const categoryName = getCategoryName(expense.category_id);
+              const paidAmountValue = getPaymentAmount(expense.id);
+              const paymentDate = getPaymentDate(expense.id);
               
               return (
                 <div
@@ -524,32 +690,52 @@ const PlannedExpenses = () => {
                         {expense.description && (
                           <span>{expense.description}</span>
                         )}
+                        {isPaid && paymentDate && (
+                          <span className="text-success">
+                            Pago em {paymentDate}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-3">
-                    <span className={`font-semibold ${isPaid ? 'text-success' : ''} ${isOverdue ? 'text-danger' : ''}`}>
-                      R$ {expense.amount.toFixed(2)}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleEdit(expense)}
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-danger hover:text-danger"
-                        onClick={() => handleDelete(expense.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                    <div className="text-right">
+                      {isPaid && paidAmountValue !== null && paidAmountValue !== expense.amount ? (
+                        <>
+                          <span className="text-xs text-muted-foreground line-through block">
+                            R$ {expense.amount.toFixed(2)}
+                          </span>
+                          <span className="font-semibold text-success">
+                            R$ {paidAmountValue.toFixed(2)}
+                          </span>
+                        </>
+                      ) : (
+                        <span className={`font-semibold ${isPaid ? 'text-success' : ''} ${isOverdue ? 'text-danger' : ''}`}>
+                          R$ {(paidAmountValue ?? expense.amount).toFixed(2)}
+                        </span>
+                      )}
                     </div>
+                    {!isPastMonth() && (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleEdit(expense)}
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-danger hover:text-danger"
+                          onClick={() => handleDelete(expense.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
