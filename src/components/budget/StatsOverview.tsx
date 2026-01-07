@@ -4,17 +4,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Edit, Check, X, ChevronDown, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface StatsOverviewProps {
   refreshTrigger?: number;
   selectedMonth: number;
   selectedYear: number;
-  gastosFixos?: number;
-  gastosVariaveis?: number;
 }
 
-const StatsOverview = ({ refreshTrigger, selectedMonth, selectedYear, gastosFixos = 0, gastosVariaveis = 0 }: StatsOverviewProps) => {
+const StatsOverview = ({ refreshTrigger, selectedMonth, selectedYear }: StatsOverviewProps) => {
   const [categories, setCategories] = useState<any[]>([]);
   const [subcategories, setSubcategories] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
@@ -127,6 +124,10 @@ const StatsOverview = ({ refreshTrigger, selectedMonth, selectedYear, gastosFixo
     return subcategories.filter(sub => sub.category_id === categoryId);
   };
 
+  const getTotalExpenses = () => {
+    return expenses.reduce((sum, e) => sum + parseFloat(String(e.amount || 0)), 0);
+  };
+
   if (loading) {
     return (
       <Card className="p-4 sm:p-6 shadow-lg gradient-card">
@@ -135,27 +136,27 @@ const StatsOverview = ({ refreshTrigger, selectedMonth, selectedYear, gastosFixo
     );
   }
 
-  const renderCategorySection = (tipo: string, title: string, colorClass: string, totalValue: number) => {
-    const filteredCategories = categories.filter(c => c.tipo === tipo);
-    
-    return (
+  // Filter categories that have expenses
+  const categoriesWithExpenses = categories.filter(cat => getCategoryValue(cat.id) > 0);
+
+  return (
+    <Card className="p-4 sm:p-6 shadow-lg gradient-card">
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
+        <h2 className="text-lg sm:text-xl font-bold text-foreground">
+          Gastos por Categoria
+        </h2>
+        <span className="text-sm sm:text-base font-bold text-foreground">
+          Total: R$ {getTotalExpenses().toFixed(2)}
+        </span>
+      </div>
+      
       <div className="space-y-3 sm:space-y-4">
-        <div className="flex items-center justify-between mb-3 sm:mb-4">
-          <div className="flex items-center gap-2">
-            <div className={`w-1 h-5 sm:h-6 ${colorClass} rounded-full`} />
-            <h3 className="text-sm sm:text-base font-semibold text-foreground">{title}</h3>
-          </div>
-          <span className="text-sm sm:text-base font-bold text-foreground">
-            R$ {totalValue.toFixed(2)}
-          </span>
-        </div>
-        
-        {filteredCategories.length === 0 ? (
-          <p className="text-sm text-muted-foreground italic">
-            Nenhuma categoria {tipo} cadastrada
+        {categoriesWithExpenses.length === 0 ? (
+          <p className="text-sm text-muted-foreground italic text-center py-4">
+            Nenhum gasto registrado neste mês
           </p>
         ) : (
-          filteredCategories.map((category) => {
+          categoriesWithExpenses.map((category) => {
             const value = getCategoryValue(category.id);
             const budget = getCategoryBudget(category.id);
             const percentage = budget > 0 ? (value / budget) * 100 : 0;
@@ -237,31 +238,35 @@ const StatsOverview = ({ refreshTrigger, selectedMonth, selectedYear, gastosFixo
                     )}
                   </div>
                 </div>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div className="flex h-full">
-                    {percentage <= 100 ? (
-                      <div 
-                        className={`h-full ${getProgressColor(percentage)} rounded-full transition-all`}
-                        style={{ width: `${percentage}%` }}
-                      />
-                    ) : (
-                      <>
-                        <div 
-                          className="h-full bg-success transition-all"
-                          style={{ width: `${(100 / percentage) * 100}%` }}
-                        />
-                        <div 
-                          className="h-full bg-danger transition-all"
-                          style={{ width: `${((percentage - 100) / percentage) * 100}%` }}
-                        />
-                      </>
+                {budget > 0 && (
+                  <>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="flex h-full">
+                        {percentage <= 100 ? (
+                          <div 
+                            className={`h-full ${getProgressColor(percentage)} rounded-full transition-all`}
+                            style={{ width: `${percentage}%` }}
+                          />
+                        ) : (
+                          <>
+                            <div 
+                              className="h-full bg-success transition-all"
+                              style={{ width: `${(100 / percentage) * 100}%` }}
+                            />
+                            <div 
+                              className="h-full bg-danger transition-all"
+                              style={{ width: `${((percentage - 100) / percentage) * 100}%` }}
+                            />
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    {percentage >= 100 && (
+                      <p className="text-xs text-danger">
+                        Excedeu em R$ {(value - budget).toFixed(2)}
+                      </p>
                     )}
-                  </div>
-                </div>
-                {percentage >= 100 && (
-                  <p className="text-xs text-danger">
-                    Excedeu em R$ {(value - budget).toFixed(2)}
-                  </p>
+                  </>
                 )}
                 
                 {/* Subcategorias expandíveis */}
@@ -286,22 +291,6 @@ const StatsOverview = ({ refreshTrigger, selectedMonth, selectedYear, gastosFixo
             );
           })
         )}
-      </div>
-    );
-  };
-
-  return (
-    <Card className="p-4 sm:p-6 shadow-lg gradient-card">
-      <h2 className="text-lg sm:text-xl font-bold text-foreground mb-4 sm:mb-6">
-        Gastos por Categoria
-      </h2>
-      
-      <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
-        {/* Gastos Fixos */}
-        {renderCategorySection("fixo", "Gastos Fixos", "bg-success", gastosFixos)}
-
-        {/* Gastos Variáveis */}
-        {renderCategorySection("variavel", "Gastos Variáveis", "bg-warning", gastosVariaveis)}
       </div>
     </Card>
   );

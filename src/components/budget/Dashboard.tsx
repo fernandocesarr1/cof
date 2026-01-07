@@ -36,8 +36,6 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [totalMes, setTotalMes] = useState(0);
-  const [gastosFixos, setGastosFixos] = useState(0);
-  const [gastosVariaveis, setGastosVariaveis] = useState(0);
   const [totalAno, setTotalAno] = useState(0);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -77,7 +75,6 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
       .from('expenses')
       .select(`
         *,
-        categories (tipo),
         people (id, name)
       `)
       .gte('date', firstDay.toISOString().split('T')[0])
@@ -85,16 +82,8 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
     
     if (expenses && expenses.length > 0) {
       const total = expenses.reduce((sum, e) => sum + parseFloat(String(e.amount || 0)), 0);
-      const fixos = expenses
-        .filter(e => e.categories?.tipo === 'fixo')
-        .reduce((sum, e) => sum + parseFloat(String(e.amount || 0)), 0);
-      const variaveis = expenses
-        .filter(e => e.categories?.tipo === 'variavel')
-        .reduce((sum, e) => sum + parseFloat(String(e.amount || 0)), 0);
       
       setTotalMes(total);
-      setGastosFixos(fixos);
-      setGastosVariaveis(variaveis);
       
       // Calcular gastos por pessoa no mês
       const peopleMap = new Map();
@@ -108,8 +97,6 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
       setPeopleData(Array.from(peopleMap.values()));
     } else {
       setTotalMes(0);
-      setGastosFixos(0);
-      setGastosVariaveis(0);
       setPeopleData([]);
     }
 
@@ -209,13 +196,13 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
                 <PlusCircle className="w-4 h-4" />
                 <span className="hidden sm:inline">Adicionar</span>
               </TabsTrigger>
-              <TabsTrigger value="dashboard" className="gap-1 sm:gap-2 text-xs sm:text-sm">
-                <LayoutDashboard className="w-4 h-4" />
-                <span className="hidden sm:inline">Dashboard</span>
-              </TabsTrigger>
               <TabsTrigger value="planned" className="gap-1 sm:gap-2 text-xs sm:text-sm">
                 <ClipboardList className="w-4 h-4" />
                 <span className="hidden sm:inline">Previstos</span>
+              </TabsTrigger>
+              <TabsTrigger value="dashboard" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+                <LayoutDashboard className="w-4 h-4" />
+                <span className="hidden sm:inline">Dashboard</span>
               </TabsTrigger>
               <TabsTrigger value="charts" className="gap-1 sm:gap-2 text-xs sm:text-sm">
                 <PieChart className="w-4 h-4" />
@@ -317,8 +304,6 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
               refreshTrigger={refreshTrigger} 
               selectedMonth={selectedMonth}
               selectedYear={selectedYear}
-              gastosFixos={gastosFixos}
-              gastosVariaveis={gastosVariaveis}
             />
           </TabsContent>
 

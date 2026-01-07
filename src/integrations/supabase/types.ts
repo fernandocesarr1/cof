@@ -199,6 +199,7 @@ export type Database = {
           id: string
           month: number
           paid: boolean
+          paid_amount: number | null
           paid_at: string | null
           planned_expense_id: string
           year: number
@@ -208,6 +209,7 @@ export type Database = {
           id?: string
           month: number
           paid?: boolean
+          paid_amount?: number | null
           paid_at?: string | null
           planned_expense_id: string
           year: number
@@ -217,6 +219,7 @@ export type Database = {
           id?: string
           month?: number
           paid?: boolean
+          paid_amount?: number | null
           paid_at?: string | null
           planned_expense_id?: string
           year?: number
