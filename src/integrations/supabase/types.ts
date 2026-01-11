@@ -201,6 +201,7 @@ export type Database = {
           paid: boolean
           paid_amount: number | null
           paid_at: string | null
+          person_id: string | null
           planned_expense_id: string
           year: number
         }
@@ -211,6 +212,7 @@ export type Database = {
           paid?: boolean
           paid_amount?: number | null
           paid_at?: string | null
+          person_id?: string | null
           planned_expense_id: string
           year: number
         }
@@ -221,10 +223,18 @@ export type Database = {
           paid?: boolean
           paid_amount?: number | null
           paid_at?: string | null
+          person_id?: string | null
           planned_expense_id?: string
           year?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "planned_expense_payments_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "planned_expense_payments_planned_expense_id_fkey"
             columns: ["planned_expense_id"]

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { logActivity } from "@/lib/activity-logger";
 import {
   Select,
   SelectContent,
@@ -56,6 +57,13 @@ interface Payment {
   paid: boolean;
   paid_at: string | null;
   paid_amount: number | null;
+  person_id: string | null;
+}
+
+interface Person {
+  id: string;
+  name: string;
+  color: string;
 }
 
 const MONTHS = [
@@ -66,6 +74,7 @@ const MONTHS = [
 const PlannedExpenses = () => {
   const [plannedExpenses, setPlannedExpenses] = useState<PlannedExpense[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [people, setPeople] = useState<Person[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -81,6 +90,7 @@ const PlannedExpenses = () => {
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [payingExpense, setPayingExpense] = useState<PlannedExpense | null>(null);
   const [paidAmount, setPaidAmount] = useState("");
+  const [paidPersonId, setPaidPersonId] = useState("");
 
   useEffect(() => {
     loadData();
@@ -120,6 +130,16 @@ const PlannedExpenses = () => {
     
     if (cats) {
       setCategories(cats);
+    }
+
+    // Load people
+    const { data: ppl } = await supabase
+      .from('people')
+      .select('*')
+      .order('name');
+    
+    if (ppl) {
+      setPeople(ppl);
     }
 
     // Load payments for selected month/year
@@ -222,6 +242,7 @@ const PlannedExpenses = () => {
   const openPaymentDialog = (expense: PlannedExpense) => {
     setPayingExpense(expense);
     setPaidAmount(expense.amount.toString());
+    setPaidPersonId("");
     setPaymentDialogOpen(true);
   };
 
@@ -231,6 +252,11 @@ const PlannedExpenses = () => {
     const amount = parseFloat(paidAmount);
     if (isNaN(amount) || amount <= 0) {
       toast({ title: "Valor inválido", variant: "destructive" });
+      return;
+    }
+
+    if (!paidPersonId) {
+      toast({ title: "Selecione quem pagou", variant: "destructive" });
       return;
     }
 
@@ -247,7 +273,8 @@ const PlannedExpenses = () => {
         .update({ 
           paid: true,
           paid_at: paidAt,
-          paid_amount: amount
+          paid_amount: amount,
+          person_id: paidPersonId
         })
         .eq('id', existingPayment.id);
       
@@ -264,7 +291,8 @@ const PlannedExpenses = () => {
           year: selectedYear,
           paid: true,
           paid_at: paidAt,
-          paid_amount: amount
+          paid_amount: amount,
+          person_id: paidPersonId
         });
       
       if (error) {
@@ -287,7 +315,8 @@ const PlannedExpenses = () => {
         amount: amount,
         category_id: payingExpense.category_id,
         date: expenseDate.toISOString().split('T')[0],
-        description: payingExpense.name + (payingExpense.description ? ` - ${payingExpense.description}` : '')
+        description: payingExpense.name + (payingExpense.description ? ` - ${payingExpense.description}` : ''),
+        person_id: paidPersonId
       });
 
     if (expenseError) {
@@ -295,10 +324,21 @@ const PlannedExpenses = () => {
       return;
     }
 
+    // Log activity for planned expense payment
+    const selectedPerson = people.find(p => p.id === paidPersonId);
+    await logActivity({
+      action: "pagar",
+      entityType: "Gasto Previsto",
+      entityName: payingExpense.name,
+      details: `R$ ${amount.toFixed(2)} - ${MONTHS[selectedMonth]}/${selectedYear}`,
+      personId: paidPersonId
+    });
+
     toast({ title: "Pagamento registrado e despesa criada!" });
     setPaymentDialogOpen(false);
     setPayingExpense(null);
     setPaidAmount("");
+    setPaidPersonId("");
     loadData();
   };
 
@@ -357,6 +397,14 @@ const PlannedExpenses = () => {
     const payment = payments.find(p => p.planned_expense_id === expenseId);
     if (payment?.paid_at) {
       return new Date(payment.paid_at).toLocaleDateString('pt-BR');
+    }
+    return null;
+  };
+
+  const getPaymentPerson = (expenseId: string) => {
+    const payment = payments.find(p => p.planned_expense_id === expenseId);
+    if (payment?.person_id) {
+      return people.find(p => p.id === payment.person_id);
     }
     return null;
   };
@@ -591,6 +639,27 @@ const PlannedExpenses = () => {
                 autoFocus
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="paid_person">Quem Pagou *</Label>
+              <Select value={paidPersonId} onValueChange={setPaidPersonId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione quem pagou" />
+                </SelectTrigger>
+                <SelectContent>
+                  {people.map((person) => (
+                    <SelectItem key={person.id} value={person.id}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: person.color }}
+                        />
+                        {person.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Button onClick={handlePayment} className="w-full">
               Confirmar Pagamento
             </Button>
@@ -691,8 +760,19 @@ const PlannedExpenses = () => {
                           <span>{expense.description}</span>
                         )}
                         {isPaid && paymentDate && (
-                          <span className="text-success">
+                          <span className="text-success flex items-center gap-1">
                             Pago em {paymentDate}
+                            {getPaymentPerson(expense.id) && (
+                              <>
+                                {" por "}
+                                <span 
+                                  className="font-medium"
+                                  style={{ color: getPaymentPerson(expense.id)?.color }}
+                                >
+                                  {getPaymentPerson(expense.id)?.name}
+                                </span>
+                              </>
+                            )}
                           </span>
                         )}
                       </div>

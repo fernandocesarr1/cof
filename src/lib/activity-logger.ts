@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type ActivityAction = "criar" | "atualizar" | "deletar";
-export type EntityType = "Despesa" | "Categoria" | "Pessoa";
+export type ActivityAction = "criar" | "atualizar" | "deletar" | "pagar";
+export type EntityType = "Despesa" | "Categoria" | "Pessoa" | "Gasto Previsto";
 
 interface LogActivityParams {
   action: ActivityAction;

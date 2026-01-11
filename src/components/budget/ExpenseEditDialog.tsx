@@ -21,7 +21,6 @@ const ExpenseEditDialog = ({ expense, open, onOpenChange, onExpenseUpdated }: Ex
   const [categories, setCategories] = useState<any[]>([]);
   const [subcategories, setSubcategories] = useState<any[]>([]);
   const [people, setPeople] = useState<any[]>([]);
-  const [tipoGasto, setTipoGasto] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [subcategoryId, setSubcategoryId] = useState("");
   const [personId, setPersonId] = useState("");
@@ -44,7 +43,6 @@ const ExpenseEditDialog = ({ expense, open, onOpenChange, onExpenseUpdated }: Ex
       setCategoryId(expense.category_id || "");
       setSubcategoryId(expense.subcategory_id || "");
       setPersonId(expense.person_id || "");
-      setTipoGasto(expense.categories?.tipo || "");
     }
   }, [expense, open]);
 
@@ -72,10 +70,6 @@ const ExpenseEditDialog = ({ expense, open, onOpenChange, onExpenseUpdated }: Ex
     setPeople(data || []);
   };
 
-  const categoriasFiltradas = tipoGasto 
-    ? categories.filter(cat => cat.tipo === tipoGasto)
-    : [];
-
   const subcategoriasFiltradas = categoryId
     ? subcategories.filter(sub => sub.category_id === categoryId)
     : [];
@@ -83,10 +77,10 @@ const ExpenseEditDialog = ({ expense, open, onOpenChange, onExpenseUpdated }: Ex
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!valor || !categoryId || !descricao || !personId) {
+    if (!valor || !descricao || !personId || !data) {
       toast({
         title: "Campos obrigatórios",
-        description: "Preencha todos os campos.",
+        description: "Preencha valor, data, pessoa e descrição.",
         variant: "destructive",
       });
       return;
@@ -144,72 +138,29 @@ const ExpenseEditDialog = ({ expense, open, onOpenChange, onExpenseUpdated }: Ex
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="edit-tipo">Tipo de Gasto</Label>
-              <Select 
-                value={tipoGasto} 
-                onValueChange={(value) => {
-                  setTipoGasto(value);
-                  setCategoryId("");
-                  setSubcategoryId("");
-                }}
-              >
-                <SelectTrigger id="edit-tipo">
-                  <SelectValue placeholder="Selecione o tipo..." />
-                </SelectTrigger>
-                <SelectContent className="bg-background border z-50">
-                  <SelectItem value="fixo">Gastos Fixos</SelectItem>
-                  <SelectItem value="variavel">Gastos Variáveis</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="edit-valor">Valor (R$) *</Label>
+              <Input
+                id="edit-valor"
+                type="number"
+                step="0.01"
+                min="0"
+                value={valor}
+                onChange={(e) => setValor(e.target.value)}
+              />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-categoria">Categoria</Label>
-              <Select 
-                value={categoryId} 
-                onValueChange={(value) => {
-                  setCategoryId(value);
-                  setSubcategoryId("");
-                }}
-                disabled={!tipoGasto}
-              >
-                <SelectTrigger id="edit-categoria">
-                  <SelectValue placeholder={tipoGasto ? "Selecione..." : "Tipo primeiro"} />
-                </SelectTrigger>
-                <SelectContent className="bg-background border z-50">
-                  {categoriasFiltradas.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="edit-data">Data *</Label>
+              <Input
+                id="edit-data"
+                type="date"
+                value={data}
+                onChange={(e) => setData(e.target.value)}
+              />
             </div>
 
-            {categoryId && (
-              <div className="space-y-2">
-                <Label htmlFor="edit-subcategoria">Subcategoria (opcional)</Label>
-                <Select 
-                  value={subcategoryId || "none"} 
-                  onValueChange={(value) => setSubcategoryId(value === "none" ? "" : value)}
-                >
-                  <SelectTrigger id="edit-subcategoria">
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background border z-50">
-                    <SelectItem value="none">Nenhuma</SelectItem>
-                    {subcategoriasFiltradas.map((sub) => (
-                      <SelectItem key={sub.id} value={sub.id}>
-                        {sub.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
             <div className="space-y-2">
-              <Label htmlFor="edit-pessoa">Pessoa</Label>
+              <Label htmlFor="edit-pessoa">Pessoa *</Label>
               <Select value={personId} onValueChange={setPersonId}>
                 <SelectTrigger id="edit-pessoa">
                   <SelectValue placeholder="Quem fez o gasto?" />
@@ -225,29 +176,49 @@ const ExpenseEditDialog = ({ expense, open, onOpenChange, onExpenseUpdated }: Ex
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-valor">Valor (R$)</Label>
-              <Input
-                id="edit-valor"
-                type="number"
-                step="0.01"
-                min="0"
-                value={valor}
-                onChange={(e) => setValor(e.target.value)}
-              />
+              <Label htmlFor="edit-categoria">Categoria</Label>
+              <Select 
+                value={categoryId} 
+                onValueChange={(value) => {
+                  setCategoryId(value);
+                  setSubcategoryId("");
+                }}
+              >
+                <SelectTrigger id="edit-categoria">
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent className="bg-background border z-50">
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-subcategoria">Subcategoria (opcional)</Label>
+              <Select 
+                value={subcategoryId || "none"} 
+                onValueChange={(value) => setSubcategoryId(value === "none" ? "" : value)}
+              >
+                <SelectTrigger id="edit-subcategoria">
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent className="bg-background border z-50">
+                  <SelectItem value="none">Nenhuma</SelectItem>
+                  {subcategoriasFiltradas.map((sub) => (
+                    <SelectItem key={sub.id} value={sub.id}>
+                      {sub.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="edit-data">Data</Label>
-              <Input
-                id="edit-data"
-                type="date"
-                value={data}
-                onChange={(e) => setData(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="edit-descricao">Descrição</Label>
+              <Label htmlFor="edit-descricao">Descrição *</Label>
               <Textarea
                 id="edit-descricao"
                 value={descricao}
