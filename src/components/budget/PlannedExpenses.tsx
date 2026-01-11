@@ -71,7 +71,11 @@ const MONTHS = [
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
 ];
 
-const PlannedExpenses = () => {
+interface PlannedExpensesProps {
+  onPaymentChange?: () => void;
+}
+
+const PlannedExpenses = ({ onPaymentChange }: PlannedExpensesProps) => {
   const [plannedExpenses, setPlannedExpenses] = useState<PlannedExpense[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
@@ -340,6 +344,7 @@ const PlannedExpenses = () => {
     setPaidAmount("");
     setPaidPersonId("");
     loadData();
+    onPaymentChange?.();
   };
 
   const togglePayment = async (expenseId: string, currentlyPaid: boolean) => {
@@ -371,10 +376,11 @@ const PlannedExpenses = () => {
             paid_at: null,
             paid_amount: null
           })
-          .eq('id', payment.id);
-      }
-      loadData();
-    } else {
+            .eq('id', payment.id);
+        }
+        loadData();
+        onPaymentChange?.();
+      } else {
       // Open dialog to enter paid amount
       const expense = plannedExpenses.find(e => e.id === expenseId);
       if (expense) {
@@ -396,9 +402,33 @@ const PlannedExpenses = () => {
   const getPaymentDate = (expenseId: string) => {
     const payment = payments.find(p => p.planned_expense_id === expenseId);
     if (payment?.paid_at) {
-      return new Date(payment.paid_at).toLocaleDateString('pt-BR');
+      return new Date(payment.paid_at);
     }
     return null;
+  };
+
+  const formatPaymentDate = (date: Date) => {
+    return date.toLocaleDateString('pt-BR');
+  };
+
+  const wasPaidLate = (expense: PlannedExpense, paymentDate: Date | null): boolean => {
+    if (!paymentDate) return false;
+    
+    const paidDay = paymentDate.getDate();
+    const paidMonth = paymentDate.getMonth();
+    const paidYear = paymentDate.getFullYear();
+    
+    // If paid in a later month/year, it's late
+    if (paidYear > selectedYear || (paidYear === selectedYear && paidMonth > selectedMonth)) {
+      return true;
+    }
+    
+    // If paid in the same month but after due day
+    if (paidYear === selectedYear && paidMonth === selectedMonth && paidDay > expense.due_day) {
+      return true;
+    }
+    
+    return false;
   };
 
   const getPaymentPerson = (expenseId: string) => {
@@ -760,8 +790,13 @@ const PlannedExpenses = () => {
                           <span>{expense.description}</span>
                         )}
                         {isPaid && paymentDate && (
-                          <span className="text-success flex items-center gap-1">
-                            Pago em {paymentDate}
+                          <span className={`flex items-center gap-1 ${wasPaidLate(expense, paymentDate) ? 'text-warning' : 'text-success'}`}>
+                            Pago em {formatPaymentDate(paymentDate)}
+                            {wasPaidLate(expense, paymentDate) && (
+                              <span className="text-warning flex items-center gap-1">
+                                (Vencia dia {expense.due_day})
+                              </span>
+                            )}
                             {getPaymentPerson(expense.id) && (
                               <>
                                 {" por "}
