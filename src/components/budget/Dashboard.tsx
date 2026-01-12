@@ -11,10 +11,7 @@ import {
   Wallet,
   CalendarDays,
   Users,
-  Bell,
-  ClipboardList,
-  AlertTriangle,
-  CheckCircle
+  Bell
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ExpenseForm from "./ExpenseForm";
@@ -43,11 +40,9 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [peopleData, setPeopleData] = useState<any[]>([]);
   const [peopleDataYear, setPeopleDataYear] = useState<any[]>([]);
-  const [plannedStats, setPlannedStats] = useState({ total: 0, paid: 0, pending: 0, overdue: 0, paidCount: 0, totalCount: 0 });
 
   useEffect(() => {
     loadTotals();
-    loadPlannedStats();
     
     // Realtime subscription para atualizar quando houver mudanças
     const channel = supabase
@@ -61,29 +56,12 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
         },
         () => {
           loadTotals();
-          loadPlannedStats();
-        }
-      )
-      .subscribe();
-
-    const plannedChannel = supabase
-      .channel('planned-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'planned_expense_payments'
-        },
-        () => {
-          loadPlannedStats();
         }
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
-      supabase.removeChannel(plannedChannel);
     };
   }, [refreshTrigger, selectedMonth, selectedYear]);
 
@@ -152,78 +130,6 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
       setTotalAno(0);
       setPeopleDataYear([]);
     }
-  };
-
-  const loadPlannedStats = async () => {
-    const today = new Date();
-    const currentMonth = today.getMonth();
-    const currentYear = today.getFullYear();
-
-    // Load all active planned expenses for selected month
-    const { data: expenses } = await supabase
-      .from('planned_expenses')
-      .select('*')
-      .eq('active', true);
-
-    if (!expenses) {
-      setPlannedStats({ total: 0, paid: 0, pending: 0, overdue: 0, paidCount: 0, totalCount: 0 });
-      return;
-    }
-
-    // Filter expenses to only show those created before or during the selected month
-    const filteredExpenses = expenses.filter((expense: any) => {
-      const createdAt = new Date(expense.created_at);
-      const createdMonth = createdAt.getMonth();
-      const createdYear = createdAt.getFullYear();
-      return createdYear < selectedYear || 
-             (createdYear === selectedYear && createdMonth <= selectedMonth);
-    });
-
-    // Load payments for selected month/year
-    const { data: payments } = await supabase
-      .from('planned_expense_payments')
-      .select('*')
-      .eq('month', selectedMonth)
-      .eq('year', selectedYear);
-
-    const paymentMap = new Map(payments?.map(p => [p.planned_expense_id, p]) || []);
-
-    let totalExpected = 0;
-    let totalPaid = 0;
-    let totalPending = 0;
-    let totalOverdue = 0;
-    let paidCount = 0;
-
-    filteredExpenses.forEach((expense: any) => {
-      totalExpected += expense.amount;
-      const payment = paymentMap.get(expense.id) as any;
-      const isPaid = payment?.paid || false;
-      
-      if (isPaid) {
-        totalPaid += payment.paid_amount ?? expense.amount;
-        paidCount++;
-      } else {
-        totalPending += expense.amount;
-        
-        // Check if overdue
-        const isOverdue = selectedYear < currentYear || 
-          (selectedYear === currentYear && selectedMonth < currentMonth) ||
-          (selectedYear === currentYear && selectedMonth === currentMonth && today.getDate() > expense.due_day);
-        
-        if (isOverdue) {
-          totalOverdue += expense.amount;
-        }
-      }
-    });
-
-    setPlannedStats({
-      total: totalExpected,
-      paid: totalPaid,
-      pending: totalPending,
-      overdue: totalOverdue,
-      paidCount,
-      totalCount: filteredExpenses.length
-    });
   };
 
   const handleExpenseAdded = () => {
@@ -322,7 +228,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
                   onManagePeople={() => {}}
                   onExpenseAdded={handleExpenseAdded}
                 />
-                <PlannedExpenses onPaymentChange={loadPlannedStats} />
+                <PlannedExpenses />
               </>
             )}
           </TabsContent>
@@ -393,45 +299,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
             </div>
 
             {/* Resumo de Gastos Previstos */}
-            <Card className="p-4 sm:p-6 gradient-card border-none shadow-lg">
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <ClipboardList className="w-4 h-4" />
-                  Gastos Previstos
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">Total Previsto</p>
-                  <p className="text-lg font-bold text-foreground">R$ {plannedStats.total.toFixed(2)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <CheckCircle className="w-3 h-3 text-success" />
-                    Pagos
-                  </p>
-                  <p className="text-lg font-bold text-success">
-                    R$ {plannedStats.paid.toFixed(2)}
-                    <span className="text-xs font-normal text-muted-foreground ml-1">
-                      ({plannedStats.paidCount}/{plannedStats.totalCount})
-                    </span>
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Pendente</p>
-                  <p className="text-lg font-bold text-foreground">R$ {plannedStats.pending.toFixed(2)}</p>
-                </div>
-                {plannedStats.overdue > 0 && (
-                  <div>
-                    <p className="text-xs text-danger flex items-center gap-1">
-                      <AlertTriangle className="w-3 h-3" />
-                      Atrasados
-                    </p>
-                    <p className="text-lg font-bold text-danger">R$ {plannedStats.overdue.toFixed(2)}</p>
-                  </div>
-                )}
-              </div>
-            </Card>
+            <PlannedExpenses compact={true} />
 
             <StatsOverview 
               refreshTrigger={refreshTrigger} 

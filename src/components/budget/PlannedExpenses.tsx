@@ -73,9 +73,10 @@ const MONTHS = [
 
 interface PlannedExpensesProps {
   onPaymentChange?: () => void;
+  compact?: boolean; // Mode for dashboard - shows only summary
 }
 
-const PlannedExpenses = ({ onPaymentChange }: PlannedExpensesProps) => {
+const PlannedExpenses = ({ onPaymentChange, compact = false }: PlannedExpensesProps) => {
   const [plannedExpenses, setPlannedExpenses] = useState<PlannedExpense[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
@@ -526,28 +527,96 @@ const PlannedExpenses = ({ onPaymentChange }: PlannedExpensesProps) => {
     return a.due_day - b.due_day;
   });
 
-  return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header com navegação de mês */}
-      <Card className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+  // Compact mode for Dashboard - shows only summary stats
+  if (compact) {
+    return (
+      <Card className="p-4 sm:p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-primary" />
+            Gastos Previstos - {MONTHS[selectedMonth]}
+          </h3>
+          <div className="flex items-center gap-1">
             <Button 
-              variant="outline" 
+              variant="ghost" 
               size="icon"
+              className="h-7 w-7"
+              onClick={() => navigateMonth(-1)}
+            >
+              <ChevronLeft className="w-3 h-3" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => navigateMonth(1)}
+            >
+              <ChevronRight className="w-3 h-3" />
+            </Button>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="bg-muted/50 rounded-lg p-3">
+            <p className="text-xs text-muted-foreground">Previsto</p>
+            <p className="text-lg font-bold text-foreground">R$ {getTotalExpected().toFixed(2)}</p>
+          </div>
+          <div className="bg-success/10 rounded-lg p-3">
+            <p className="text-xs text-muted-foreground">Pago</p>
+            <p className="text-lg font-bold text-success">R$ {getTotalPaid().toFixed(2)}</p>
+          </div>
+          <div className="bg-muted/50 rounded-lg p-3">
+            <p className="text-xs text-muted-foreground">Status</p>
+            <p className="text-lg font-bold text-foreground">{getPaidCount()}/{plannedExpenses.length}</p>
+          </div>
+          {getOverdueCount() > 0 ? (
+            <div className="bg-danger/10 rounded-lg p-3">
+              <p className="text-xs text-danger flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                Atrasados
+              </p>
+              <p className="text-lg font-bold text-danger">{getOverdueCount()}</p>
+            </div>
+          ) : (
+            <div className="bg-muted/50 rounded-lg p-3">
+              <p className="text-xs text-muted-foreground">Pendente</p>
+              <p className="text-lg font-bold text-foreground">
+                R$ {(getTotalExpected() - getTotalPaid()).toFixed(2)}
+              </p>
+            </div>
+          )}
+        </div>
+      </Card>
+    );
+  }
+
+  // Full mode for "Adicionar" tab - shows list and management
+  return (
+    <Card className="p-4 sm:p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+          <Calendar className="w-5 h-5 text-primary" />
+          Gastos Previstos
+        </h3>
+        
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+            <Button 
+              variant="ghost" 
+              size="icon"
+              className="h-7 w-7"
               onClick={() => navigateMonth(-1)}
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
-            <div className="flex items-center gap-2 px-4">
-              <Calendar className="w-4 h-4 text-muted-foreground" />
-              <span className="font-medium">
-                {MONTHS[selectedMonth]} {selectedYear}
-              </span>
-            </div>
+            <span className="text-sm font-medium px-2 min-w-[100px] text-center">
+              {MONTHS[selectedMonth].slice(0, 3)} {selectedYear}
+            </span>
             <Button 
-              variant="outline" 
+              variant="ghost" 
               size="icon"
+              className="h-7 w-7"
               onClick={() => navigateMonth(1)}
             >
               <ChevronRight className="w-4 h-4" />
@@ -562,9 +631,9 @@ const PlannedExpenses = ({ onPaymentChange }: PlannedExpensesProps) => {
             }
           }}>
             <DialogTrigger asChild>
-              <Button className="gap-2">
+              <Button size="sm" className="gap-1">
                 <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">Novo Gasto</span>
+                <span className="hidden sm:inline">Novo</span>
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -596,7 +665,7 @@ const PlannedExpenses = ({ onPaymentChange }: PlannedExpensesProps) => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="due_day">Dia do Vencimento</Label>
+                    <Label htmlFor="due_day">Dia Vencimento</Label>
                     <Input
                       id="due_day"
                       type="number"
@@ -642,7 +711,7 @@ const PlannedExpenses = ({ onPaymentChange }: PlannedExpensesProps) => {
             </DialogContent>
           </Dialog>
         </div>
-      </Card>
+      </div>
 
       {/* Payment Dialog */}
       <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
@@ -697,168 +766,119 @@ const PlannedExpenses = ({ onPaymentChange }: PlannedExpensesProps) => {
         </DialogContent>
       </Dialog>
 
-      {/* Resumo */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <p className="text-sm text-muted-foreground">Total Previsto</p>
-          <p className="text-2xl font-bold text-foreground">
-            R$ {getTotalExpected().toFixed(2)}
-          </p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-sm text-muted-foreground">Total Pago</p>
-          <p className="text-2xl font-bold text-success">
-            R$ {getTotalPaid().toFixed(2)}
-          </p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-sm text-muted-foreground">Pagos / Total</p>
-          <p className="text-2xl font-bold text-foreground">
-            {getPaidCount()} / {plannedExpenses.length}
-          </p>
-        </Card>
-        {getOverdueCount() > 0 && (
-          <Card className="p-4 bg-danger/10 border-danger/30">
-            <p className="text-sm text-danger flex items-center gap-1">
-              <AlertTriangle className="w-4 h-4" />
-              Atrasados
-            </p>
-            <p className="text-2xl font-bold text-danger">
-              {getOverdueCount()} - R$ {getTotalOverdue().toFixed(2)}
-            </p>
-          </Card>
-        )}
-      </div>
-
       {/* Lista de gastos previstos */}
-      <Card className="p-4">
-        <h3 className="text-lg font-semibold mb-4">Gastos do Mês</h3>
-        
-        {plannedExpenses.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <p>Nenhum gasto previsto para este mês.</p>
-            <p className="text-sm mt-2">Clique em "Novo Gasto" para adicionar.</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {sortedExpenses.map((expense) => {
-              const isPaid = isExpensePaid(expense.id);
-              const isOverdue = isExpenseOverdue(expense);
-              const categoryName = getCategoryName(expense.category_id);
-              const paidAmountValue = getPaymentAmount(expense.id);
-              const paymentDate = getPaymentDate(expense.id);
-              
-              return (
-                <div
-                  key={expense.id}
-                  className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
-                    isPaid 
-                      ? 'bg-success/10 border-success/30' 
-                      : isOverdue
-                        ? 'bg-danger/10 border-danger/50 animate-pulse'
-                        : 'bg-card border-border hover:bg-muted/50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Checkbox
-                      checked={isPaid}
-                      onCheckedChange={() => togglePayment(expense.id, isPaid)}
-                      className={`${isPaid ? 'data-[state=checked]:bg-success data-[state=checked]:border-success' : ''} ${isOverdue ? 'border-danger' : ''}`}
-                    />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className={`font-medium ${isPaid ? 'line-through text-muted-foreground' : ''} ${isOverdue ? 'text-danger' : ''}`}>
-                          {expense.name}
-                        </p>
-                        {isOverdue && (
-                          <span className="text-xs bg-danger text-white px-2 py-0.5 rounded-full flex items-center gap-1">
-                            <AlertTriangle className="w-3 h-3" />
-                            Atrasado
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span className={`${isOverdue ? 'text-danger font-medium' : ''}`}>
-                          Vence dia {expense.due_day}
-                        </span>
-                        {categoryName && (
-                          <span className="bg-muted px-2 py-0.5 rounded">
-                            {categoryName}
-                          </span>
-                        )}
-                        {expense.description && (
-                          <span>{expense.description}</span>
-                        )}
-                        {isPaid && paymentDate && (
-                          <span className={`flex items-center gap-1 ${wasPaidLate(expense, paymentDate) ? 'text-warning' : 'text-success'}`}>
-                            Pago em {formatPaymentDate(paymentDate)}
-                            {wasPaidLate(expense, paymentDate) && (
-                              <span className="text-warning flex items-center gap-1">
-                                (Vencia dia {expense.due_day})
-                              </span>
-                            )}
-                            {getPaymentPerson(expense.id) && (
-                              <>
-                                {" por "}
-                                <span 
-                                  className="font-medium"
-                                  style={{ color: getPaymentPerson(expense.id)?.color }}
-                                >
-                                  {getPaymentPerson(expense.id)?.name}
-                                </span>
-                              </>
-                            )}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      {isPaid && paidAmountValue !== null && paidAmountValue !== expense.amount ? (
-                        <>
-                          <span className="text-xs text-muted-foreground line-through block">
-                            R$ {expense.amount.toFixed(2)}
-                          </span>
-                          <span className="font-semibold text-success">
-                            R$ {paidAmountValue.toFixed(2)}
-                          </span>
-                        </>
-                      ) : (
-                        <span className={`font-semibold ${isPaid ? 'text-success' : ''} ${isOverdue ? 'text-danger' : ''}`}>
-                          R$ {(paidAmountValue ?? expense.amount).toFixed(2)}
+      {plannedExpenses.length === 0 ? (
+        <div className="text-center py-6 text-muted-foreground">
+          <p>Nenhum gasto previsto para este mês.</p>
+          <p className="text-sm mt-1">Clique em "Novo" para adicionar.</p>
+        </div>
+      ) : (
+        <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+          {sortedExpenses.map((expense) => {
+            const isPaid = isExpensePaid(expense.id);
+            const isOverdue = isExpenseOverdue(expense);
+            const categoryName = getCategoryName(expense.category_id);
+            const paidAmountValue = getPaymentAmount(expense.id);
+            const paymentDate = getPaymentDate(expense.id);
+            const paymentPerson = getPaymentPerson(expense.id);
+            
+            return (
+              <div
+                key={expense.id}
+                className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                  isPaid 
+                    ? 'bg-success/10 border-success/30' 
+                    : isOverdue
+                      ? 'bg-danger/10 border-danger/50 animate-pulse'
+                      : 'bg-muted/30 border-border hover:bg-muted/50'
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <Checkbox
+                    checked={isPaid}
+                    onCheckedChange={() => togglePayment(expense.id, isPaid)}
+                    className={`flex-shrink-0 ${isPaid ? 'data-[state=checked]:bg-success data-[state=checked]:border-success' : ''} ${isOverdue ? 'border-danger' : ''}`}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className={`font-medium truncate ${isPaid ? 'line-through text-muted-foreground' : ''} ${isOverdue ? 'text-danger' : ''}`}>
+                        {expense.name}
+                      </p>
+                      {isOverdue && (
+                        <span className="text-xs bg-danger text-white px-1.5 py-0.5 rounded flex items-center gap-1 flex-shrink-0">
+                          <AlertTriangle className="w-3 h-3" />
+                          Atrasado
                         </span>
                       )}
                     </div>
-                    {!isPastMonth() && (
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleEdit(expense)}
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-danger hover:text-danger"
-                          onClick={() => handleDelete(expense.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground flex-wrap">
+                      <span className={`${isOverdue ? 'text-danger font-medium' : ''}`}>
+                        Dia {expense.due_day}
+                      </span>
+                      {categoryName && (
+                        <span className="bg-muted px-1.5 py-0.5 rounded text-xs">
+                          {categoryName}
+                        </span>
+                      )}
+                      {isPaid && paymentDate && (
+                        <span className={`${wasPaidLate(expense, paymentDate) ? 'text-warning' : 'text-success'}`}>
+                          • {formatPaymentDate(paymentDate)}
+                          {wasPaidLate(expense, paymentDate) && ` (vencia dia ${expense.due_day})`}
+                          {paymentPerson && (
+                            <span style={{ color: paymentPerson.color }} className="font-medium">
+                              {` - ${paymentPerson.name}`}
+                            </span>
+                          )}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </Card>
-    </div>
+                
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="text-right">
+                    {isPaid && paidAmountValue !== null && paidAmountValue !== expense.amount ? (
+                      <>
+                        <span className="text-xs text-muted-foreground line-through block">
+                          R$ {expense.amount.toFixed(2)}
+                        </span>
+                        <span className="font-semibold text-success text-sm">
+                          R$ {paidAmountValue.toFixed(2)}
+                        </span>
+                      </>
+                    ) : (
+                      <span className={`font-semibold text-sm ${isPaid ? 'text-success' : ''} ${isOverdue ? 'text-danger' : ''}`}>
+                        R$ {(paidAmountValue ?? expense.amount).toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                  {!isPastMonth() && (
+                    <div className="flex items-center">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => handleEdit(expense)}
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-danger hover:text-danger"
+                        onClick={() => handleDelete(expense.id)}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Card>
   );
 };
 
