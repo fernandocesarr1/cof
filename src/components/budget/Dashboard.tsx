@@ -298,7 +298,7 @@ const Dashboard = ({ onLogout }: DashboardProps) => {
               </Card>
             </div>
 
-            {/* Resumo de Gastos Previstos */}
+            {/* Resumo de Gastos Fixos */}
             <PlannedExpenses compact={true} />
 
             <StatsOverview 
