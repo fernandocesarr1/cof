@@ -196,7 +196,7 @@ const PlannedExpenses = ({ onPaymentChange, compact = false }: PlannedExpensesPr
         toast({ title: "Erro ao atualizar", variant: "destructive" });
         return;
       }
-      toast({ title: "Gasto previsto atualizado!" });
+      toast({ title: "Gasto fixo atualizado!" });
     } else {
       const { error } = await supabase
         .from('planned_expenses')
@@ -206,7 +206,7 @@ const PlannedExpenses = ({ onPaymentChange, compact = false }: PlannedExpensesPr
         toast({ title: "Erro ao criar", variant: "destructive" });
         return;
       }
-      toast({ title: "Gasto previsto criado!" });
+      toast({ title: "Gasto fixo criado!" });
     }
 
     setFormData({ name: "", amount: "", category_id: "", description: "", due_day: "1" });
@@ -228,7 +228,7 @@ const PlannedExpenses = ({ onPaymentChange, compact = false }: PlannedExpensesPr
       toast({ title: "Erro ao remover", variant: "destructive" });
       return;
     }
-    toast({ title: "Gasto previsto removido!" });
+    toast({ title: "Gasto fixo removido!" });
     loadData();
   };
 
@@ -333,7 +333,7 @@ const PlannedExpenses = ({ onPaymentChange, compact = false }: PlannedExpensesPr
     const selectedPerson = people.find(p => p.id === paidPersonId);
     await logActivity({
       action: "pagar",
-      entityType: "Gasto Previsto",
+      entityType: "Gasto Fixo",
       entityName: payingExpense.name,
       details: `R$ ${amount.toFixed(2)} - ${MONTHS[selectedMonth]}/${selectedYear}`,
       personId: paidPersonId
@@ -534,7 +534,7 @@ const PlannedExpenses = ({ onPaymentChange, compact = false }: PlannedExpensesPr
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
             <Calendar className="w-4 h-4 text-primary" />
-            Gastos Previstos - {MONTHS[selectedMonth]}
+            Gastos Fixos - {MONTHS[selectedMonth]}
           </h3>
           <div className="flex items-center gap-1">
             <Button 
@@ -597,7 +597,7 @@ const PlannedExpenses = ({ onPaymentChange, compact = false }: PlannedExpensesPr
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
           <Calendar className="w-5 h-5 text-primary" />
-          Gastos Previstos
+          Gastos Fixos
         </h3>
         
         <div className="flex items-center gap-2">
@@ -639,7 +639,7 @@ const PlannedExpenses = ({ onPaymentChange, compact = false }: PlannedExpensesPr
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>
-                  {editingExpense ? "Editar Gasto Previsto" : "Novo Gasto Previsto"}
+                  {editingExpense ? "Editar Gasto Fixo" : "Novo Gasto Fixo"}
                 </DialogTitle>
               </DialogHeader>
               <div className="space-y-4 mt-4">
@@ -766,10 +766,10 @@ const PlannedExpenses = ({ onPaymentChange, compact = false }: PlannedExpensesPr
         </DialogContent>
       </Dialog>
 
-      {/* Lista de gastos previstos */}
+      {/* Lista de gastos fixos */}
       {plannedExpenses.length === 0 ? (
         <div className="text-center py-6 text-muted-foreground">
-          <p>Nenhum gasto previsto para este mês.</p>
+          <p>Nenhum gasto fixo para este mês.</p>
           <p className="text-sm mt-1">Clique em "Novo" para adicionar.</p>
         </div>
       ) : (
